@@ -50,7 +50,7 @@ const player = new Player(spawn);
 scene.add(player.group);
 
 const rig = new CameraRig(camera);
-rig.occluders = props.group;
+rig.occluders = props.occluders;
 const input = new Input(canvas, uiRoot);
 
 const hud = new Hud(uiRoot, () => gather());

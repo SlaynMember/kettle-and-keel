@@ -121,17 +121,20 @@ function buildCampfire(pos: THREE.Vector3): Campfire {
 
 export class Props {
   readonly group = new THREE.Group();
+  /** only tall props block the camera — grass and rocks shouldn't yank it in */
+  readonly occluders = new THREE.Group();
   readonly campfire: Campfire;
   private clock = 0;
 
   constructor(spawn: THREE.Vector3) {
+    this.group.add(this.occluders);
     for (let i = 0; i < 26; i++) {
       const p = scatterPoint(1.8, 11, 0.6);
       if (!p) continue;
       const t = puffTree();
       t.position.copy(p);
       t.position.y -= 0.1;
-      this.group.add(t);
+      this.occluders.add(t);
     }
     for (let i = 0; i < 16; i++) {
       const p = scatterPoint(0.6, 14, 1.2);
