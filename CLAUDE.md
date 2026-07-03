@@ -7,7 +7,7 @@ Cozy low-poly 3D island game. Gather herbs, craft, brew tea, befriend companions
 Three.js + TypeScript (strict) + Vite, deployed as a PWA. No React, no game framework. DOM/CSS for all UI (never canvas-drawn UI — that's how the old game's buttons broke).
 
 - `npm run dev` / `npm run build` (tsc --noEmit + vite build) / `npm run preview`
-- Deploy: `npx netlify-cli deploy --prod --dir=dist` (site `kettle-and-keel`; not yet repo-linked for auto-deploy)
+- Deploy: `git push origin main` — Netlify auto-deploys (repo-linked since 2026-07-03). No CLI deploys.
 - Live: https://kettle-and-keel.netlify.app
 
 ## Architecture rules (from the Corsair Catch post-mortem — non-negotiable)
