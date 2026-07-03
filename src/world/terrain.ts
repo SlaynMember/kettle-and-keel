@@ -47,9 +47,13 @@ export function heightAt(x: number, z: number): number {
   const base = fbm(x * 0.016, z * 0.016) * 9 + 5.5;
   const detail = fbm(x * 0.06 + 40, z * 0.06 + 40) * 1.4;
   const h = (base + detail) * falloff - 1.6;
-  // beyond the island radius the noise can poke back above sea level and
-  // silhouette as a dark ridge on the horizon — force open ocean instead
-  if (d > 1) return Math.min(h, -1.2 - (d - 1) * 6);
+  // beyond the island the seafloor blends to a CONSTANT depth: with
+  // transparent water, any bumpy noise out there reads as phantom dark
+  // mesas through the surface
+  if (d > 1) {
+    const t = Math.min(1, (d - 1) * 1.8);
+    return THREE.MathUtils.lerp(Math.min(h, -1.2), -7.5, t);
+  }
   return h;
 }
 

@@ -12,10 +12,12 @@ export class Water {
   constructor() {
     const geo = new THREE.PlaneGeometry(1400, 1400, 96, 96);
     geo.rotateX(-Math.PI / 2);
-    // opaque: semi-transparent water lets the seafloor silhouette through
-    // and it reads as dark phantom mesas on the horizon
+    // transparent so shallows show the sand and swimmers sink into it;
+    // safe now that the distant seafloor is a constant depth (terrain.ts)
     const mat = new THREE.MeshLambertMaterial({
       color: 0x2f7f9e,
+      transparent: true,
+      opacity: 0.82,
       flatShading: true,
     });
     mat.onBeforeCompile = (shader) => {

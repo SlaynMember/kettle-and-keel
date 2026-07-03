@@ -1,6 +1,7 @@
 /**
- * Island dressing: puff trees, rocks, grass tufts, and the spawn-point
- * campfire with its kettle (the game is named after it — it gets a light).
+ * Island dressing: grass tufts and the spawn-point campfire with its kettle
+ * (the game is named after it — it gets a light and a brew prompt).
+ * Trees and rocks live in entities/resources.ts now — they're harvestable.
  */
 import * as THREE from 'three';
 import { heightAt, slopeAt, makeRng, ISLAND_RADIUS } from './terrain';
@@ -19,42 +20,6 @@ function scatterPoint(minH: number, maxH: number, maxSlope: number): THREE.Vecto
     }
   }
   return null;
-}
-
-function puffTree(): THREE.Group {
-  const g = new THREE.Group();
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8a5a3b, flatShading: true });
-  const canopyMat = new THREE.MeshLambertMaterial({
-    color: rng() > 0.5 ? 0x5f9e4f : 0x74ad58,
-    flatShading: true,
-  });
-  const h = 1.6 + rng() * 1.4;
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, h, 6), trunkMat);
-  trunk.position.y = h / 2;
-  g.add(trunk);
-  const puffs = 2 + Math.floor(rng() * 3);
-  for (let i = 0; i < puffs; i++) {
-    const s = 1.1 + rng() * 0.9;
-    const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), canopyMat);
-    puff.position.set((rng() - 0.5) * 1.2, h + s * 0.5 + i * 0.55, (rng() - 0.5) * 1.2);
-    puff.rotation.set(rng() * Math.PI, rng() * Math.PI, 0);
-    g.add(puff);
-  }
-  g.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.castShadow = true;
-  });
-  return g;
-}
-
-function rock(): THREE.Mesh {
-  const m = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(0.5 + rng() * 1.1, 0),
-    new THREE.MeshLambertMaterial({ color: rng() > 0.5 ? 0x8d8577 : 0x7d766b, flatShading: true })
-  );
-  m.scale.y = 0.55 + rng() * 0.3;
-  m.rotation.y = rng() * Math.PI;
-  m.castShadow = true;
-  return m;
 }
 
 function grassTuft(): THREE.Mesh {
@@ -121,31 +86,10 @@ function buildCampfire(pos: THREE.Vector3): Campfire {
 
 export class Props {
   readonly group = new THREE.Group();
-  /** only tall props block the camera — grass and rocks shouldn't yank it in */
-  readonly occluders = new THREE.Group();
   readonly campfire: Campfire;
   private clock = 0;
 
   constructor(spawn: THREE.Vector3) {
-    this.group.add(this.occluders);
-    const clearOfSpawn = (p: THREE.Vector3, radius: number) =>
-      Math.hypot(p.x - spawn.x, p.z - spawn.z) >= radius;
-
-    for (let i = 0; i < 26; i++) {
-      const p = scatterPoint(1.8, 11, 0.6);
-      if (!p || !clearOfSpawn(p, 14)) continue; // keep the spawn vista open
-      const t = puffTree();
-      t.position.copy(p);
-      t.position.y -= 0.1;
-      this.occluders.add(t);
-    }
-    for (let i = 0; i < 16; i++) {
-      const p = scatterPoint(0.6, 14, 1.2);
-      if (!p || !clearOfSpawn(p, 6)) continue;
-      const r = rock();
-      r.position.copy(p);
-      this.group.add(r);
-    }
     for (let i = 0; i < 40; i++) {
       const p = scatterPoint(1.5, 8, 0.5);
       if (!p) continue;
@@ -154,7 +98,6 @@ export class Props {
       gr.position.y += 0.2;
       this.group.add(gr);
     }
-    // campfire sits just up the beach from spawn
     const fp = spawn.clone();
     fp.y = heightAt(fp.x, fp.z);
     this.campfire = buildCampfire(fp);
@@ -165,7 +108,6 @@ export class Props {
     this.clock += dt;
     const flicker = 0.85 + Math.sin(this.clock * 11) * 0.1 + Math.sin(this.clock * 23.7) * 0.05;
     this.campfire.flame.scale.set(flicker, flicker * (1 + Math.sin(this.clock * 7) * 0.12), flicker);
-    // fire reads strongest at night
     this.campfire.light.intensity = (0.35 + (1 - daylight) * 2.2) * flicker;
   }
 }

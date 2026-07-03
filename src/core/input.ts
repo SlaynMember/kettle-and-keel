@@ -13,6 +13,10 @@ export class Input {
   private lookDY = 0;
   private keys = new Set<string>();
   private interactHandlers: Array<() => void> = [];
+  private panelHandlers: Array<() => void> = [];
+  private escapeHandlers: Array<() => void> = [];
+  private mouseDownAt = { x: 0, y: 0, t: 0 };
+  private mouseDragged = false;
 
   // touch tracking
   private movePointer: number | null = null;
@@ -42,8 +46,11 @@ export class Input {
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      if (e.code === 'Tab') e.preventDefault(); // don't move browser focus
       this.keys.add(e.code);
       if (e.code === 'KeyE' || e.code === 'Space') this.fireInteract();
+      if (e.code === 'Tab' || e.code === 'KeyI') this.panelHandlers.forEach((fn) => fn());
+      if (e.code === 'Escape') this.escapeHandlers.forEach((fn) => fn());
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -51,6 +58,16 @@ export class Input {
 
   onInteract(fn: () => void) {
     this.interactHandlers.push(fn);
+  }
+
+  /** Tab / I — toggle the satchel */
+  onTogglePanel(fn: () => void) {
+    this.panelHandlers.push(fn);
+  }
+
+  /** Escape — close panel / cancel placement */
+  onEscape(fn: () => void) {
+    this.escapeHandlers.push(fn);
   }
 
   fireInteract() {
@@ -83,6 +100,8 @@ export class Input {
   private onDown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse') {
       this.mouseDown = true;
+      this.mouseDownAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+      this.mouseDragged = false;
       return;
     }
     // touch: left 45% of screen drives the joystick, the rest drives the camera
@@ -101,6 +120,9 @@ export class Input {
       if (this.mouseDown) {
         this.lookDX += e.movementX;
         this.lookDY += e.movementY;
+        if (Math.hypot(e.clientX - this.mouseDownAt.x, e.clientY - this.mouseDownAt.y) > 6) {
+          this.mouseDragged = true;
+        }
       }
       return;
     }
@@ -126,6 +148,10 @@ export class Input {
   private onUp = (e: PointerEvent) => {
     if (e.pointerType === 'mouse') {
       this.mouseDown = false;
+      // a short, still click (not a look-drag) triggers the active interaction
+      if (!this.mouseDragged && performance.now() - this.mouseDownAt.t < 350) {
+        this.fireInteract();
+      }
       return;
     }
     if (e.pointerId === this.movePointer) {

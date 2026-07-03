@@ -4,28 +4,25 @@
  * (the exact class of bug that killed the old game's top-right corner).
  */
 import { store } from '../core/store';
-import { HERBS } from '../data/items';
+import { ITEMS } from '../data/items';
 import { audio } from '../audio/audio';
-import type { HerbDef } from '../data/items';
+
+const MAX_CHIPS = 5;
 
 export class Hud {
-  private counters = new Map<string, HTMLElement>();
-  private gatherBtn: HTMLButtonElement;
+  private inv: HTMLElement;
+  private actionBtn: HTMLButtonElement;
+  private cancelBtn: HTMLButtonElement;
+  private satchelBtn: HTMLButtonElement;
   private timeChip: HTMLElement;
+  private buffBox: HTMLElement;
   private toastBox: HTMLElement;
 
-  constructor(root: HTMLElement, onGather: () => void) {
-    // top-left: inventory chips
-    const inv = document.createElement('div');
-    inv.className = 'hud-inventory';
-    for (const herb of HERBS) {
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.innerHTML = `<span class="dot" style="background:#${herb.blossom.toString(16).padStart(6, '0')}"></span><span class="chip-name">${herb.name}</span><span class="chip-count">0</span>`;
-      inv.appendChild(chip);
-      this.counters.set(herb.id, chip.querySelector('.chip-count')!);
-    }
-    root.appendChild(inv);
+  constructor(root: HTMLElement, handlers: { onAction: () => void; onSatchel: () => void; onCancel: () => void }) {
+    // top-left: compact inventory chips
+    this.inv = document.createElement('div');
+    this.inv.className = 'hud-inventory';
+    root.appendChild(this.inv);
 
     // top-right: day/time + mute
     const topRight = document.createElement('div');
@@ -43,14 +40,36 @@ export class Hud {
     topRight.append(this.timeChip, muteBtn);
     root.appendChild(topRight);
 
-    // bottom-right: gather action
-    this.gatherBtn = document.createElement('button');
-    this.gatherBtn.className = 'gather-btn hidden';
-    this.gatherBtn.addEventListener('pointerdown', (e) => {
+    // buffs under the clock
+    this.buffBox = document.createElement('div');
+    this.buffBox.className = 'hud-buffs';
+    root.appendChild(this.buffBox);
+
+    // bottom-right stack: satchel + action
+    const stack = document.createElement('div');
+    stack.className = 'hud-actions';
+    this.satchelBtn = document.createElement('button');
+    this.satchelBtn.className = 'satchel-btn';
+    this.satchelBtn.innerHTML = '🎒';
+    this.satchelBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      onGather();
+      handlers.onSatchel();
     });
-    root.appendChild(this.gatherBtn);
+    this.actionBtn = document.createElement('button');
+    this.actionBtn.className = 'gather-btn hidden';
+    this.actionBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handlers.onAction();
+    });
+    this.cancelBtn = document.createElement('button');
+    this.cancelBtn.className = 'cancel-btn hidden';
+    this.cancelBtn.textContent = 'Cancel';
+    this.cancelBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handlers.onCancel();
+    });
+    stack.append(this.cancelBtn, this.actionBtn, this.satchelBtn);
+    root.appendChild(stack);
 
     // toasts
     this.toastBox = document.createElement('div');
@@ -58,19 +77,34 @@ export class Hud {
     root.appendChild(this.toastBox);
 
     store.subscribe((s) => {
-      for (const herb of HERBS) {
-        this.counters.get(herb.id)!.textContent = String(s.inventory[herb.id] ?? 0);
+      this.inv.innerHTML = '';
+      const owned = ITEMS.filter((i) => (s.inventory[i.id] ?? 0) > 0);
+      for (const item of owned.slice(0, MAX_CHIPS)) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.innerHTML = `<span class="chip-emoji">${item.emoji}</span><span class="chip-count">${s.inventory[item.id]}</span>`;
+        chip.title = item.name;
+        this.inv.appendChild(chip);
+      }
+      if (owned.length > MAX_CHIPS) {
+        const more = document.createElement('div');
+        more.className = 'chip';
+        more.innerHTML = `<span class="chip-count">+${owned.length - MAX_CHIPS}</span>`;
+        this.inv.appendChild(more);
       }
     });
   }
 
-  setGatherTarget(herb: HerbDef | null) {
-    if (herb) {
-      this.gatherBtn.textContent = `Gather ${herb.name}`;
-      this.gatherBtn.classList.remove('hidden');
+  /** the big context button; null hides it. danger renders the invalid-placement state */
+  setAction(label: string | null, opts: { danger?: boolean; cancelable?: boolean } = {}) {
+    if (label) {
+      this.actionBtn.textContent = label;
+      this.actionBtn.classList.remove('hidden');
+      this.actionBtn.classList.toggle('danger', !!opts.danger);
     } else {
-      this.gatherBtn.classList.add('hidden');
+      this.actionBtn.classList.add('hidden');
     }
+    this.cancelBtn.classList.toggle('hidden', !opts.cancelable);
   }
 
   setTime(time: number, day: number) {
@@ -80,13 +114,28 @@ export class Hud {
     this.timeChip.textContent = `${icon} Day ${day} · ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
   }
 
+  setBuffs(buffs: { speed: number; glow: number }) {
+    this.buffBox.innerHTML = '';
+    const entries: Array<[string, number]> = [
+      ['🍵', buffs.speed],
+      ['✨', buffs.glow],
+    ];
+    for (const [icon, secs] of entries) {
+      if (secs <= 0) continue;
+      const chip = document.createElement('div');
+      chip.className = 'chip buff-chip';
+      chip.textContent = `${icon} ${Math.ceil(secs)}s`;
+      this.buffBox.appendChild(chip);
+    }
+  }
+
   toast(msg: string) {
     const t = document.createElement('div');
     t.className = 'toast';
     t.textContent = msg;
     this.toastBox.appendChild(t);
-    setTimeout(() => t.classList.add('out'), 1400);
-    setTimeout(() => t.remove(), 1900);
+    setTimeout(() => t.classList.add('out'), 1600);
+    setTimeout(() => t.remove(), 2100);
   }
 
   /** intro overlay; resolves on first tap (also unlocks audio) */
@@ -98,7 +147,7 @@ export class Hud {
         <div class="intro-card">
           <h1>Kettle <span class="amp">&amp;</span> Keel</h1>
           <p class="tagline">wash ashore · gather · brew · sail</p>
-          <p class="hint">left thumb to walk, right thumb to look<br/>WASD + mouse drag on desktop · E to gather</p>
+          <p class="hint">left thumb to walk, right thumb to look<br/>WASD + mouse · click or E to use · Tab for satchel</p>
           <button class="begin-btn">Set foot on the island</button>
         </div>`;
       document.getElementById('app')!.appendChild(overlay);

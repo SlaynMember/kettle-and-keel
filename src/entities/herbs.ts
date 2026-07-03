@@ -1,15 +1,13 @@
 /**
  * Gatherable herb clusters, driven entirely by the data registry.
- * Nearest-in-range cluster glows; gathering shrinks it, banks the item,
- * and regrows it after the herb's respawn time.
+ * Registered on the shared interaction system; the active cluster glows.
  */
 import * as THREE from 'three';
 import { HERBS, type HerbDef } from '../data/items';
 import { heightAt, slopeAt, makeRng, ISLAND_RADIUS } from '../world/terrain';
 import { store } from '../core/store';
 import { audio } from '../audio/audio';
-
-const GATHER_RANGE = 2.6;
+import { interactions, type Interactable } from '../core/interact';
 
 interface HerbCluster {
   def: HerbDef;
@@ -19,6 +17,7 @@ interface HerbCluster {
   swayPhase: number;
   state: 'grown' | 'gathering' | 'regrowing';
   timer: number;
+  inter: Interactable;
 }
 
 const rng = makeRng(31337);
@@ -53,10 +52,9 @@ function buildCluster(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[
 export class HerbField {
   readonly group = new THREE.Group();
   private clusters: HerbCluster[] = [];
-  private nearest: HerbCluster | null = null;
   private clock = 0;
 
-  constructor() {
+  constructor(private onGather: () => void, private toast: (msg: string) => void) {
     for (const def of HERBS) {
       for (let i = 0; i < def.count; i++) {
         const pos = this.scatter(def);
@@ -64,7 +62,7 @@ export class HerbField {
         const { group, blossoms } = buildCluster(def);
         group.position.copy(pos);
         this.group.add(group);
-        this.clusters.push({
+        const cluster: HerbCluster = {
           def,
           group,
           blossoms,
@@ -72,7 +70,17 @@ export class HerbField {
           swayPhase: rng() * Math.PI * 2,
           state: 'grown',
           timer: 0,
-        });
+          inter: null as never,
+        };
+        cluster.inter = {
+          label: () => (cluster.state === 'grown' ? `Gather ${def.name}` : null),
+          position: pos,
+          range: 2.6,
+          priority: 0,
+          action: () => this.gather(cluster),
+        };
+        interactions.add(cluster.inter);
+        this.clusters.push(cluster);
       }
     }
   }
@@ -91,40 +99,19 @@ export class HerbField {
     return null;
   }
 
-  /** the herb currently in gather range, if any */
-  get target(): HerbDef | null {
-    return this.nearest?.def ?? null;
-  }
-
-  tryGather(): boolean {
-    const c = this.nearest;
-    if (!c || c.state !== 'grown') return false;
+  private gather(c: HerbCluster) {
+    if (c.state !== 'grown') return;
     c.state = 'gathering';
     c.timer = 0;
     store.addItem(c.def.id);
     audio.sfx('sfx-pickup');
-    this.nearest = null;
-    return true;
+    this.onGather();
+    this.toast(`+1 ${c.def.name}`);
   }
 
-  update(dt: number, playerPos: THREE.Vector3) {
+  update(dt: number) {
     this.clock += dt;
-
-    // nearest grown cluster in range
-    let best: HerbCluster | null = null;
-    let bestD = GATHER_RANGE;
     for (const c of this.clusters) {
-      if (c.state !== 'grown') continue;
-      const d = c.basePos.distanceTo(playerPos);
-      if (d < bestD) {
-        bestD = d;
-        best = c;
-      }
-    }
-    this.nearest = best;
-
-    for (const c of this.clusters) {
-      // gentle sway, all off the same clock
       c.group.rotation.z = Math.sin(this.clock * 1.4 + c.swayPhase) * 0.06;
 
       if (c.state === 'gathering') {
@@ -147,8 +134,7 @@ export class HerbField {
         c.group.scale.setScalar(Math.min(1, c.group.scale.x + dt * 1.5));
       }
 
-      // highlight pulse on the targeted cluster
-      const isTarget = c === this.nearest;
+      const isTarget = interactions.active === c.inter;
       for (const b of c.blossoms) {
         const m = b.material as THREE.MeshLambertMaterial;
         m.emissiveIntensity = isTarget ? 0.55 + Math.sin(this.clock * 6) * 0.3 : 0.12;
