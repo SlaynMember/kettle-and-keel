@@ -1,15 +1,29 @@
 /**
- * Audio manager. The one layer of the old game worth keeping was its audio
- * design: contextual, tuned volumes, distinct feedback moments. Files carried
- * over from Corsair Catch live in /public/audio.
+ * Audio manager. SFX design carried from Corsair Catch; the music is Will's
+ * original Kettle & Keel soundtrack, played CONTEXTUALLY:
  *
- * Music is a rotating playlist that remembers its track and position across
- * refreshes. (Roadmap: original Kettle & Keel music.)
+ *   explore  — Tiny Tea Boat        (default: wandering, gathering, day)
+ *   workshop — Harbor Toy Workshop / Building (satchel, kettle, placing)
+ *   risk     — Hazy Tea Drift       (night — alert, not punished)
+ *
+ * (Beat the Drum lives in /music-reserve, waiting for boat crossings.)
+ * Context switches crossfade over ~1.5s with a little hysteresis so quick
+ * satchel peeks don't whiplash the music. Each track remembers its position.
  */
 import { store } from '../core/store';
 
-const PLAYLIST = ['catch-pixel', 'long-modern-techno-8bit', 'beach-wave-corsair'];
-const MUSIC_KEY = 'kk-music-v1';
+export type MusicContext = 'explore' | 'workshop' | 'risk';
+
+const TRACKS: Record<MusicContext, string[]> = {
+  explore: ['tiny-tea-boat'],
+  workshop: ['harbor-toy-workshop', 'building'],
+  risk: ['hazy-tea-drift'],
+};
+
+const MUSIC_KEY = 'kk-music-v2';
+const BGM_VOLUME = 0.4;
+const FADE_SECONDS = 1.5;
+const CONTEXT_DEBOUNCE = 1.2; // seconds a new context must persist before switching
 
 const SFX_VOLUMES: Record<string, number> = {
   'sfx-pickup': 0.5,
@@ -20,45 +34,100 @@ const SFX_VOLUMES: Record<string, number> = {
 };
 
 class AudioManager {
-  private bgm: HTMLAudioElement | null = null;
-  private trackIdx = 0;
   private unlocked = false;
+  private current: HTMLAudioElement | null = null;
+  private fading: HTMLAudioElement | null = null;
+  private context: MusicContext = 'explore';
+  private currentTrack = '';
+  private pending: MusicContext | null = null;
+  private pendingFor = 0;
+  private positions: Record<string, number> = {};
+  private workshopFlip = 0;
 
   /** Must be called from a user gesture (the "tap to begin" overlay). */
   unlock() {
     if (this.unlocked) return;
     this.unlocked = true;
-
-    let resumeAt = 0;
     try {
       const saved = JSON.parse(localStorage.getItem(MUSIC_KEY) || 'null');
-      if (saved && PLAYLIST.includes(saved.track)) {
-        this.trackIdx = PLAYLIST.indexOf(saved.track);
-        resumeAt = saved.time || 0;
-      }
+      if (saved?.positions) this.positions = saved.positions;
     } catch {
       /* fresh start */
     }
-    this.playTrack(this.trackIdx, resumeAt);
+    this.startTrack(this.pickTrack(this.context));
 
     window.setInterval(() => {
-      if (this.bgm && !this.bgm.paused) {
-        localStorage.setItem(MUSIC_KEY, JSON.stringify({ track: PLAYLIST[this.trackIdx], time: this.bgm.currentTime }));
+      if (this.current && !this.current.paused) {
+        this.positions[this.currentTrack] = this.current.currentTime;
+        localStorage.setItem(MUSIC_KEY, JSON.stringify({ positions: this.positions }));
       }
     }, 5000);
   }
 
-  private playTrack(idx: number, startAt = 0) {
-    this.bgm?.pause();
-    this.trackIdx = idx % PLAYLIST.length;
-    this.bgm = new Audio(`/audio/${PLAYLIST[this.trackIdx]}.mp3`);
-    this.bgm.volume = 0.35;
-    this.bgm.currentTime = startAt;
-    this.bgm.addEventListener('ended', () => this.playTrack(this.trackIdx + 1));
-    this.applyMute();
-    this.bgm.play().catch(() => {
+  /** called every frame by the game loop; debounces then crossfades */
+  setContext(ctx: MusicContext, dt: number) {
+    if (!this.unlocked || ctx === this.context) {
+      this.pending = null;
+      return;
+    }
+    if (this.pending !== ctx) {
+      this.pending = ctx;
+      this.pendingFor = 0;
+      return;
+    }
+    this.pendingFor += dt;
+    if (this.pendingFor >= CONTEXT_DEBOUNCE) {
+      this.context = ctx;
+      this.pending = null;
+      this.crossfadeTo(this.pickTrack(ctx));
+    }
+  }
+
+  /** advance fades; called every frame */
+  update(dt: number) {
+    if (this.fading) {
+      this.fading.volume = Math.max(0, this.fading.volume - (BGM_VOLUME / FADE_SECONDS) * dt);
+      if (this.fading.volume <= 0.01) {
+        this.fading.pause();
+        this.fading = null;
+      }
+    }
+    if (this.current && this.current.volume < BGM_VOLUME) {
+      this.current.volume = Math.min(BGM_VOLUME, this.current.volume + (BGM_VOLUME / FADE_SECONDS) * dt);
+    }
+  }
+
+  private pickTrack(ctx: MusicContext): string {
+    const list = TRACKS[ctx];
+    if (ctx === 'workshop') {
+      this.workshopFlip = (this.workshopFlip + 1) % list.length;
+      return list[this.workshopFlip];
+    }
+    return list[0];
+  }
+
+  private startTrack(name: string, fadeIn = false) {
+    this.currentTrack = name;
+    const a = new Audio(`/audio/${name}.mp3`);
+    a.loop = true;
+    a.volume = fadeIn ? 0 : BGM_VOLUME;
+    a.currentTime = this.positions[name] || 0;
+    a.muted = store.get().muted;
+    a.play().catch(() => {
       /* autoplay refusal — user can unmute from the HUD */
     });
+    this.current = a;
+  }
+
+  private crossfadeTo(name: string) {
+    if (name === this.currentTrack) return;
+    if (this.current) {
+      this.positions[this.currentTrack] = this.current.currentTime;
+      // if something was already fading, drop it immediately
+      this.fading?.pause();
+      this.fading = this.current;
+    }
+    this.startTrack(name, true);
   }
 
   sfx(name: keyof typeof SFX_VOLUMES | string) {
@@ -70,11 +139,9 @@ class AudioManager {
 
   toggleMute() {
     store.set({ muted: !store.get().muted });
-    this.applyMute();
-  }
-
-  private applyMute() {
-    if (this.bgm) this.bgm.muted = store.get().muted;
+    const muted = store.get().muted;
+    if (this.current) this.current.muted = muted;
+    if (this.fading) this.fading.muted = muted;
   }
 }
 

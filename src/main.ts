@@ -14,6 +14,7 @@ import { ResourceField } from './entities/resources';
 import { Structures } from './entities/structures';
 import { Hud } from './ui/hud';
 import { SatchelPanel } from './ui/panel';
+import { audio, type MusicContext } from './audio/audio';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
@@ -139,6 +140,12 @@ function tick() {
     store.set({ buffs: { ...buffs } });
   }
 
+  // contextual soundtrack: workshop while crafting/placing, Hazy Tea Drift at night
+  const musicCtx: MusicContext =
+    panel.isOpen || structures.placing ? 'workshop' : sky.daylight < 0.25 ? 'risk' : 'explore';
+  audio.setContext(musicCtx, dt);
+  audio.update(dt);
+
   rig.update(dt, input, player.position);
   sky.update(dt, player.position);
   water.update(dt);
@@ -174,4 +181,4 @@ hud.showIntro().then(() => {
 tick();
 
 // dev/debug handle (also how automated playtests drive the game)
-Object.assign(window, { __kk: { player, rig, sky, camera, heightAt, store, structures, buffs } });
+Object.assign(window, { __kk: { player, rig, sky, camera, heightAt, store, structures, buffs, audio, panel } });
