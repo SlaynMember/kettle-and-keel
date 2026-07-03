@@ -36,6 +36,7 @@ Dev server + chrome-devtools MCP. `window.__kk` exposes `{ player, rig, sky, cam
 - time of day: `__kk.sky.time = 0.9` (0 midnight, 0.5 noon)
 - drive: dispatch `KeyboardEvent`s (KeyW etc.) on `window`; touch via `PointerEvent` with `pointerType:'touch'` on the canvas (left 45% = joystick)
 - Screenshot desktop AND a phone-landscape viewport (~844×390) before shipping visual changes.
+- **Synthetic `dispatchEvent` bypasses hit-testing** — it "worked" while an invisible overlay ate every real touch (the v1 phone-movement bug). After ANY overlay/UI change, verify with `document.elementFromPoint(x, y)` that the canvas (or intended element) is what a real finger hits at: left thumb zone, right thumb zone, center, and each button. Any new full-screen overlay must get `#ui > .thing.hidden { pointer-events: none; }` — the `#ui > *` rule outranks bare class selectors.
 
 ## Roadmap
 

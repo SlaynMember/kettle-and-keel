@@ -58,6 +58,18 @@ body,
   pointer-events: auto;
 }
 
+/* the #ui > * rule above wins on specificity (ID selector), so every
+   passive/hidden overlay must be re-disabled at equal-or-higher specificity
+   or it invisibly eats canvas touches — this is exactly the bug that broke
+   phone movement in v1 */
+#ui > .hud-inventory,
+#ui > .hud-buffs,
+#ui > .toast-box,
+#ui > .joystick,
+#ui > .satchel.hidden {
+  pointer-events: none;
+}
+
 button {
   font-family: inherit;
 }
