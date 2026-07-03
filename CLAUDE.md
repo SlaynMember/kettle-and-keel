@@ -22,12 +22,12 @@ Three.js + TypeScript (strict) + Vite, deployed as a PWA. No React, no game fram
 
 ## Layout
 
-- `src/core/` — store, input, camera rig
-- `src/world/` — terrain (heightAt/slopeAt are analytic — sample them, never raycast the mesh), sky (owns time of day), water, props
-- `src/entities/` — player, herbs
-- `src/data/` — content registries
-- `src/audio/` — audio manager; files in `public/audio/` carried from Corsair Catch (element-attack WAVs still in the old repo if needed)
-- `src/ui/` — DOM HUD + intro overlay + styles
+- `src/core/` — store (typed save: inventory/structures/buffs), input, camera rig, interact (unified proximity-prompt system — register anything usable here)
+- `src/world/` — terrain (heightAt/slopeAt are analytic — sample them, never raycast the mesh), sky (owns time of day), water, props (grass + campfire/kettle)
+- `src/entities/` — player (walk/swim/punch/gather animations), herbs, resources (harvestable trees/rocks/algae), structures (drying rack + placement-ghost flow; shack building extends this)
+- `src/data/` — content registries (items, recipes, herbs)
+- `src/audio/` — audio manager (resuming music playlist); files in `public/audio/` carried from Corsair Catch (element-attack WAVs still in the old repo if needed)
+- `src/ui/` — DOM HUD, satchel/kettle panel, intro overlay, styles (Fredoka, self-hosted in `public/fonts/`)
 
 ## Playtesting (do this — it's why we chose web)
 
