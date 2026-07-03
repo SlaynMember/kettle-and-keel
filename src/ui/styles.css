@@ -1,0 +1,261 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a2f38;
+  font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+/* ---------- chips ---------- */
+.hud-inventory {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.hud-topright {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(16, 30, 37, 0.72);
+  color: #edf2eb;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+}
+
+.chip .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.chip-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(16, 30, 37, 0.72);
+  font-size: 17px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* ---------- joystick ---------- */
+.joystick {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  background: rgba(237, 242, 235, 0.08);
+  border: 2px solid rgba(237, 242, 235, 0.25);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.joystick.active {
+  opacity: 1;
+}
+
+.joystick-nub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: rgba(237, 242, 235, 0.55);
+}
+
+/* ---------- gather button ---------- */
+.gather-btn {
+  position: absolute;
+  right: calc(22px + env(safe-area-inset-right));
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  padding: 16px 26px;
+  border: none;
+  border-radius: 999px;
+  background: #e8623d;
+  color: #fff7ef;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 18px rgba(232, 98, 61, 0.45);
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    opacity 0.15s;
+}
+
+.gather-btn:active {
+  transform: scale(0.94);
+}
+
+.gather-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+/* ---------- toasts ---------- */
+.toast-box {
+  position: absolute;
+  left: 50%;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(16, 30, 37, 0.82);
+  color: #edf2eb;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  animation: toast-in 0.25s ease-out;
+  transition: opacity 0.4s;
+}
+
+.toast.out {
+  opacity: 0;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* ---------- intro ---------- */
+.intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #23414e 0%, #14262e 75%);
+  transition: opacity 0.6s;
+  z-index: 10;
+}
+
+.intro.fade {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-card {
+  text-align: center;
+  color: #edf2eb;
+  padding: 24px;
+}
+
+.intro-card h1 {
+  font-size: clamp(38px, 8vw, 64px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.intro-card .amp {
+  color: #e8623d;
+}
+
+.intro-card .tagline {
+  margin-top: 10px;
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.intro-card .hint {
+  margin-top: 26px;
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.6;
+}
+
+.begin-btn {
+  margin-top: 30px;
+  padding: 16px 34px;
+  border: none;
+  border-radius: 999px;
+  background: #e8623d;
+  color: #fff7ef;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(232, 98, 61, 0.4);
+  transition: transform 0.12s;
+}
+
+.begin-btn:active {
+  transform: scale(0.95);
+}

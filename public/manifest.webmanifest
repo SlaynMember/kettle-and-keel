@@ -1,0 +1,18 @@
+{
+  "name": "Kettle & Keel",
+  "short_name": "Kettle & Keel",
+  "description": "A cozy low-poly island-hopping game. Gather, brew, befriend, sail.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a2f38",
+  "theme_color": "#1a2f38",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purposes": "any maskable"
+    }
+  ]
+}

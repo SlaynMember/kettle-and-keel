@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="28" fill="#1a2f38"/>
+  <!-- keel / hull -->
+  <path d="M20 78 Q64 100 108 78 L98 92 Q64 108 30 92 Z" fill="#c98a4b"/>
+  <!-- kettle body -->
+  <circle cx="64" cy="54" r="22" fill="#e8623d"/>
+  <!-- kettle lid -->
+  <rect x="56" y="28" width="16" height="6" rx="3" fill="#e8623d"/>
+  <circle cx="64" cy="26" r="4" fill="#f4b860"/>
+  <!-- spout -->
+  <path d="M84 48 Q98 44 96 34 L102 36 Q104 48 88 54 Z" fill="#e8623d"/>
+  <!-- steam -->
+  <path d="M96 28 Q92 22 96 16" stroke="#9fd8cb" stroke-width="4" stroke-linecap="round" fill="none"/>
+</svg>
