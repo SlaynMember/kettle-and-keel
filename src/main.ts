@@ -39,7 +39,8 @@ function findSpawn(): THREE.Vector3 {
 }
 const spawn = findSpawn();
 
-const props = new Props(spawn.clone().add(new THREE.Vector3(3.5, 0, -3)));
+// campfire sits east of spawn, out of the default camera line
+const props = new Props(spawn.clone().add(new THREE.Vector3(6.5, 0, 1.5)));
 scene.add(props.group);
 
 const herbs = new HerbField();
