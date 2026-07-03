@@ -128,9 +128,12 @@ export class Props {
 
   constructor(spawn: THREE.Vector3) {
     this.group.add(this.occluders);
+    const clearOfSpawn = (p: THREE.Vector3, radius: number) =>
+      Math.hypot(p.x - spawn.x, p.z - spawn.z) >= radius;
+
     for (let i = 0; i < 26; i++) {
       const p = scatterPoint(1.8, 11, 0.6);
-      if (!p) continue;
+      if (!p || !clearOfSpawn(p, 14)) continue; // keep the spawn vista open
       const t = puffTree();
       t.position.copy(p);
       t.position.y -= 0.1;
@@ -138,7 +141,7 @@ export class Props {
     }
     for (let i = 0; i < 16; i++) {
       const p = scatterPoint(0.6, 14, 1.2);
-      if (!p) continue;
+      if (!p || !clearOfSpawn(p, 6)) continue;
       const r = rock();
       r.position.copy(p);
       this.group.add(r);
