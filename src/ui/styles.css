@@ -129,6 +129,35 @@ button {
   font-size: 15px;
 }
 
+/* generated item icons — same slots the emoji used */
+img.item-icon {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+img.chip-emoji {
+  width: 20px;
+  height: 20px;
+}
+
+img.inv-emoji {
+  width: 34px;
+  height: 34px;
+}
+
+img.cost-glyph {
+  width: 17px;
+  height: 17px;
+  margin-right: 1px;
+}
+
+img.recipe-glyph {
+  width: 22px;
+  height: 22px;
+  margin-right: 2px;
+}
+
 .chip-count {
   font-variant-numeric: tabular-nums;
 }

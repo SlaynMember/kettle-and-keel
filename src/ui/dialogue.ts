@@ -9,17 +9,10 @@ import { audio } from '../audio/audio';
 
 const CHARS_PER_SEC = 45;
 
-// player portrait is Will's hand-fed artwork (public/images/portrait-you.webp);
-// the gull stays code-drawn — its lopsided picasso energy is canon now
-const YOU_IMG = `<img src="/images/portrait-you.webp" alt="You"/>`;
-
-const GULL_SVG = `
-<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
-  <path d="M20 92 Q18 60 34 46 Q26 34 34 24 Q46 12 62 22 Q74 30 70 46 Q84 56 82 92 Z" fill="#f0f2ee"/>
-  <path d="M30 24 Q40 14 52 20" stroke="#262223" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-  <circle cx="46" cy="34" r="4" fill="#262223"/>
-  <path d="M56 34 Q76 36 80 44 Q68 46 56 40 Z" fill="#e8a13d"/>
-</svg>`;
+// both portraits are generated cut-paper artwork (content-drop sources,
+// shipped from public/images/portraits/) — Biscuit kept the eyebrow
+const YOU_IMG = `<img src="/images/portraits/you.webp" alt="You"/>`;
+const GULL_IMG = `<img src="/images/portraits/biscuit.webp" alt="Gull"/>`;
 
 export class DialoguePanel {
   private el: HTMLDivElement;
@@ -47,7 +40,7 @@ export class DialoguePanel {
           <div class="dialogue-text"></div>
           <div class="dialogue-hint hidden">▼ tap</div>
         </div>
-        <div class="dialogue-portrait gull">${GULL_SVG}</div>
+        <div class="dialogue-portrait gull">${GULL_IMG}</div>
       </div>`;
     root.appendChild(this.el);
     this.nameEl = this.el.querySelector('.dialogue-name')!;

@@ -3,3 +3,7 @@ dist/
 .netlify/
 *.local
 .DS_Store
+
+# GPT/Codex staging area — source art + writing packs (42MB of PNG sources).
+# Deployable copies live in public/images/. Integrated text lives in src/data/.
+content-drop/

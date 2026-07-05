@@ -27,6 +27,8 @@ export interface ItemDef {
   name: string;
   emoji: string;
   desc: string;
+  /** generated art in public/images/icons/items/; emoji is the fallback */
+  icon?: string;
   /** teas can be drunk from the satchel */
   drinkable?: { buff: 'speed' | 'glow'; seconds: number };
   /** kits can be placed in the world */
@@ -35,18 +37,28 @@ export interface ItemDef {
   driesTo?: ItemId;
 }
 
+/** item glyph markup: generated icon when we have one, emoji otherwise */
+export function itemGlyph(item: ItemDef, cls: string): string {
+  return item.icon
+    ? `<img class="${cls} item-icon" src="${item.icon}" alt="${item.name}"/>`
+    : `<span class="${cls}">${item.emoji}</span>`;
+}
+
+const ICONS = '/images/icons/items';
+
 export const ITEMS: ItemDef[] = [
-  { id: 'seamint', name: 'Seamint', emoji: '🌿', desc: 'Cool, bright herb from the beach grass.', driesTo: 'dried_seamint' },
-  { id: 'emberbloom', name: 'Emberbloom', emoji: '🌺', desc: 'Warm highland blossom.', driesTo: 'dried_emberbloom' },
-  { id: 'wood', name: 'Wood', emoji: '🪵', desc: 'Knocked from island trees.' },
-  { id: 'stone', name: 'Stone', emoji: '🪨', desc: 'Chipped from boulders.' },
-  { id: 'algae', name: 'Algae', emoji: '🌱', desc: 'Silky strands from the shallows.' },
-  { id: 'dried_seamint', name: 'Dried Seamint', emoji: '🍃', desc: 'Ready for the kettle.' },
-  { id: 'dried_emberbloom', name: 'Dried Emberbloom', emoji: '🥀', desc: 'Ready for the kettle.' },
+  { id: 'seamint', name: 'Seamint', emoji: '🌿', icon: `${ICONS}/seamint.webp`, desc: 'Cool, bright herb from the beach grass.', driesTo: 'dried_seamint' },
+  { id: 'emberbloom', name: 'Emberbloom', emoji: '🌺', icon: `${ICONS}/emberbloom.webp`, desc: 'Warm highland blossom.', driesTo: 'dried_emberbloom' },
+  { id: 'wood', name: 'Wood', emoji: '🪵', icon: `${ICONS}/wood.webp`, desc: 'Knocked from island trees.' },
+  { id: 'stone', name: 'Stone', emoji: '🪨', icon: `${ICONS}/stone.webp`, desc: 'Chipped from boulders.' },
+  { id: 'algae', name: 'Algae', emoji: '🌱', icon: `${ICONS}/algae.webp`, desc: 'Silky strands from the shallows.' },
+  { id: 'dried_seamint', name: 'Dried Seamint', emoji: '🍃', icon: `${ICONS}/dried-herbs.webp`, desc: 'Ready for the kettle.' },
+  { id: 'dried_emberbloom', name: 'Dried Emberbloom', emoji: '🥀', icon: `${ICONS}/dried-herbs.webp`, desc: 'Ready for the kettle.' },
   {
     id: 'seamint_tea',
     name: 'Seamint Tea',
     emoji: '🍵',
+    icon: `${ICONS}/seamint-tea.webp`,
     desc: 'Drink for quick, light steps.',
     drinkable: { buff: 'speed', seconds: 120 },
   },
@@ -54,6 +66,7 @@ export const ITEMS: ItemDef[] = [
     id: 'ember_chai',
     name: 'Ember Chai',
     emoji: '☕',
+    icon: `${ICONS}/ember-chai.webp`,
     desc: 'Drink to carry a warm glow through the night.',
     drinkable: { buff: 'glow', seconds: 150 },
   },
@@ -61,6 +74,7 @@ export const ITEMS: ItemDef[] = [
     id: 'drying_rack_kit',
     name: 'Drying Rack',
     emoji: '🪤',
+    icon: `${ICONS}/drying-rack.webp`,
     desc: 'Place it, load fresh herbs, come back for dried leaves.',
     placeable: 'drying_rack',
   },
@@ -68,6 +82,7 @@ export const ITEMS: ItemDef[] = [
     id: 'bird_bath_kit',
     name: 'Bird Bath',
     emoji: '⛲',
+    icon: `${ICONS}/bird-bath.webp`,
     desc: 'A stone basin. Fill it with something warm and see who visits.',
     placeable: 'bird_bath',
   },

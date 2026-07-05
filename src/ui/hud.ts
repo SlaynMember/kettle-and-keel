@@ -4,7 +4,7 @@
  * (the exact class of bug that killed the old game's top-right corner).
  */
 import { store } from '../core/store';
-import { ITEMS } from '../data/items';
+import { ITEMS, itemGlyph } from '../data/items';
 import { audio } from '../audio/audio';
 
 const MAX_CHIPS = 5;
@@ -88,7 +88,7 @@ export class Hud {
       for (const item of owned.slice(0, MAX_CHIPS)) {
         const chip = document.createElement('div');
         chip.className = 'chip';
-        chip.innerHTML = `<span class="chip-emoji">${item.emoji}</span><span class="chip-count">${s.inventory[item.id]}</span>`;
+        chip.innerHTML = `${itemGlyph(item, 'chip-emoji')}<span class="chip-count">${s.inventory[item.id]}</span>`;
         chip.title = item.name;
         this.inv.appendChild(chip);
       }

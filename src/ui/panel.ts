@@ -4,7 +4,7 @@
  * kettle recipes unlocked.
  */
 import { store } from '../core/store';
-import { ITEMS, RECIPES, ITEM_BY_ID, type ItemDef } from '../data/items';
+import { ITEMS, RECIPES, ITEM_BY_ID, itemGlyph, type ItemDef } from '../data/items';
 import { audio } from '../audio/audio';
 
 export class SatchelPanel {
@@ -77,7 +77,7 @@ export class SatchelPanel {
     for (const item of owned) {
       const cell = document.createElement('div');
       cell.className = 'inv-cell';
-      cell.innerHTML = `<span class="inv-emoji">${item.emoji}</span><span class="inv-count">${inv[item.id]}</span><span class="inv-name">${item.name}</span>`;
+      cell.innerHTML = `${itemGlyph(item, 'inv-emoji')}<span class="inv-count">${inv[item.id]}</span><span class="inv-name">${item.name}</span>`;
       const action = this.itemAction(item);
       if (action) {
         const btn = document.createElement('button');
@@ -103,11 +103,11 @@ export class SatchelPanel {
         .map(([id, q]) => {
           const def = ITEM_BY_ID.get(id as never)!;
           const have = inv[id] ?? 0;
-          return `<span class="cost ${have >= (q ?? 0) ? 'ok' : 'short'}">${def.emoji}${q}</span>`;
+          return `<span class="cost ${have >= (q ?? 0) ? 'ok' : 'short'}">${itemGlyph(def, 'cost-glyph')}${q}</span>`;
         })
         .join('');
       row.innerHTML = `
-        <span class="recipe-out">${out.emoji} <b>${out.name}</b>${r.station === 'kettle' ? '<span class="station-tag">kettle</span>' : ''}</span>
+        <span class="recipe-out">${itemGlyph(out, 'recipe-glyph')} <b>${out.name}</b>${r.station === 'kettle' ? '<span class="station-tag">kettle</span>' : ''}</span>
         <span class="recipe-costs">${costs}</span>`;
       const btn = document.createElement('button');
       btn.className = 'recipe-btn';
