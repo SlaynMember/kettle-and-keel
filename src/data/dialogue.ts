@@ -84,4 +84,29 @@ export const BOTTLE_NOTES: string[] = [
   'If you hear bells underwater, come back with tea and better lungs.',
   'The island rewards patience, but it also rewards poking things with a stick.',
   'Tell Biscuit I still owe him a chip. Do not tell him where I live.',
+  // writing pack 2 (2026-07-05)
+  'The wreck still points inland at low tide. Either it remembers something, or the beach has opinions.',
+  'If you find my shovel, please apologize to it. I asked too much of a tool with one job.',
+  'Sand gets everywhere. This is not advice, just a warning from someone who once owned socks.',
+  'The gull says he is an admiral. Admirals usually have boats. Draw your own conclusions.',
+  'Good soil is just dirt that learned manners. Bad soil is still useful if you are patient.',
+  'I saw a green strand in the garden bed and thought it was a weed. It may have been supervising.',
+  'A lean-to is not a home, but it is a convincing argument against rain.',
+  'The beach gives you parts. The camp gives them purpose. The gull gives them notes.',
+  'If a recipe smells impossible, brew it later. If it smells rude, brew it now.',
+  'The tide left prints around my camp this morning. Tiny feet, large confidence.',
+];
+
+/** two-line teases shown on mystery (????) recipe rows; picked per recipe, stable */
+export const MYSTERY_TEASES: string[] = [
+  'Something brisk hides in the dried leaves. The kettle smells like clean wind and bad posture.',
+  'Warm petals, dry leaves, a little nerve. Smells like smoke and bad decisions.',
+  'The cup fogs before the recipe makes sense. Biscuit pretends not to be watching.',
+  'A bitter green thread pulls the brew together. It tastes like the shallows learned manners.',
+  'Wood, stone, and a stubborn idea. Not tea, but the camp approves.',
+  'A basin wants more than rainwater. The gull is already rehearsing complaints.',
+  'Dry first, brew second, brag never. The leaves remember the order.',
+  'The steam comes up amber and rude. It warms your hands before your judgment.',
+  'Something simple is almost ready. The trick is letting the island finish it.',
+  'The recipe refuses to name itself. It smells useful enough to forgive.',
 ];

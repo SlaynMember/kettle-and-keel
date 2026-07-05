@@ -132,14 +132,14 @@ export class Hud {
   setBuffs(buffs: { speed: number; glow: number }) {
     this.buffBox.innerHTML = '';
     const entries: Array<[string, number]> = [
-      ['🍵', buffs.speed],
-      ['✨', buffs.glow],
+      ['/images/icons/buffs/speed.webp', buffs.speed],
+      ['/images/icons/buffs/glow.webp', buffs.glow],
     ];
     for (const [icon, secs] of entries) {
       if (secs <= 0) continue;
       const chip = document.createElement('div');
       chip.className = 'chip buff-chip';
-      chip.textContent = `${icon} ${Math.ceil(secs)}s`;
+      chip.innerHTML = `<img class="buff-icon" src="${icon}" alt=""/> ${Math.ceil(secs)}s`;
       this.buffBox.appendChild(chip);
     }
   }

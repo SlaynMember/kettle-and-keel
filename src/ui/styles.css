@@ -160,6 +160,13 @@ img.recipe-glyph {
   margin-right: 2px;
 }
 
+img.buff-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: -3px;
+}
+
 .chip-count {
   font-variant-numeric: tabular-nums;
 }

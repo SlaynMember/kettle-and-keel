@@ -5,6 +5,7 @@
  */
 import { store, type Inventory } from '../core/store';
 import { ITEMS, RECIPES, ITEM_BY_ID, itemGlyph, type ItemDef, type RecipeDef } from '../data/items';
+import { MYSTERY_TEASES } from '../data/dialogue';
 import { audio } from '../audio/audio';
 
 export class SatchelPanel {
@@ -146,7 +147,9 @@ export class SatchelPanel {
   private renderMysteryRow(r: RecipeDef, inv: Inventory, discovered: string[]) {
     const row = document.createElement('div');
     row.className = 'recipe-row recipe-row-mystery';
-    row.title = "You haven't met every ingredient yet.";
+    // stable per-recipe tease (hover / long-press tooltip)
+    const teaseIdx = [...r.id].reduce((a, c) => a + c.charCodeAt(0), 0) % MYSTERY_TEASES.length;
+    row.title = MYSTERY_TEASES[teaseIdx];
     const costs = Object.entries(r.inputs)
       .map(([id, q]) => {
         if (!discovered.includes(id)) return '<span class="cost unknown">?</span>';
