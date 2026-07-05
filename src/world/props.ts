@@ -38,6 +38,11 @@ export interface Campfire {
   position: THREE.Vector3;
 }
 
+export interface Wreck {
+  group: THREE.Group;
+  position: THREE.Vector3;
+}
+
 function buildCampfire(pos: THREE.Vector3): Campfire {
   const g = new THREE.Group();
   const logMat = new THREE.MeshLambertMaterial({ color: 0x6b4226, flatShading: true });
@@ -84,9 +89,95 @@ function buildCampfire(pos: THREE.Vector3): Campfire {
   return { group: g, flame, light, position: pos.clone() };
 }
 
+/**
+ * Deterministic beach-band scan for the wreck: walk outward ring by ring from
+ * a target point (~18 west of the campfire) until a cell lands in the sand
+ * height band. No rng — same wreck spot every load, like the terrain itself.
+ */
+function findWreckSpot(near: THREE.Vector3): THREE.Vector3 | null {
+  const targetX = near.x - 18;
+  const targetZ = near.z;
+  const step = 1.5;
+  for (let ring = 0; ring < 14; ring++) {
+    for (let dz = -ring; dz <= ring; dz++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== ring) continue; // only the new ring's cells
+        const x = targetX + dx * step;
+        const z = targetZ + dz * step;
+        const h = heightAt(x, z);
+        if (h >= 0.8 && h <= 1.5) return new THREE.Vector3(x, h, z);
+      }
+    }
+  }
+  return null;
+}
+
+const WRECK_WOOD = new THREE.MeshLambertMaterial({ color: 0x6b4226, flatShading: true });
+const WRECK_DARK = new THREE.MeshLambertMaterial({ color: 0x54341e, flatShading: true });
+
+function buildWreck(pos: THREE.Vector3): THREE.Group {
+  const g = new THREE.Group();
+
+  // a bow section listing in the sand: keel line, two hull sides, the stern gone
+  const keel = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.22, 0.24), WRECK_DARK);
+  keel.position.y = 0.1;
+  keel.rotation.z = 0.1; // bow end noses upward
+  g.add(keel);
+
+  // port side survives as three strakes climbing toward the bow
+  for (let i = 0; i < 3; i++) {
+    const len = 4.0 - i * 0.7;
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(len, 0.34, 0.09), i % 2 ? WRECK_DARK : WRECK_WOOD);
+    plank.position.set(-(4.4 - len) / 2 + 0.15, 0.28 + i * 0.3, 0.34 + i * 0.12);
+    plank.rotation.x = -0.5; // flares outward like a hull side
+    plank.rotation.z = 0.1;
+    g.add(plank);
+  }
+  // starboard side is torn open: only one low strake left
+  const sb = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.34, 0.09), WRECK_WOOD);
+  sb.position.set(-0.5, 0.3, -0.36);
+  sb.rotation.x = 0.5;
+  sb.rotation.z = 0.1;
+  g.add(sb);
+
+  // bow post where the sides meet, proud of the sand
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.26), WRECK_DARK);
+  bow.position.set(2.15, 0.6, 0);
+  bow.rotation.z = -0.35;
+  g.add(bow);
+
+  // exposed ribs past the torn end — the skeleton the sea kept
+  const ribGeo = new THREE.BoxGeometry(0.13, 1.0, 0.13);
+  for (let i = 0; i < 3; i++) {
+    const rib = new THREE.Mesh(ribGeo, WRECK_DARK);
+    rib.position.set(-2.5 - i * 0.55, 0.28 - i * 0.09, i % 2 ? 0.3 : -0.3);
+    rib.rotation.z = i % 2 ? 0.5 : -0.4;
+    rib.rotation.x = i % 2 ? -0.25 : 0.3;
+    g.add(rib);
+  }
+
+  // snapped mast fallen across the hull
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 2.3, 6), WRECK_WOOD);
+  mast.position.set(0.2, 0.75, 0.5);
+  mast.rotation.z = THREE.MathUtils.degToRad(62);
+  mast.rotation.x = THREE.MathUtils.degToRad(14);
+  g.add(mast);
+
+  g.traverse((o) => {
+    if (o instanceof THREE.Mesh) o.castShadow = true;
+  });
+
+  g.position.copy(pos);
+  g.position.y -= 0.12; // keel buried, hull proud of the sand line
+  g.rotation.y = 0.4; // fixed tilt — reads as random without touching Math.random
+  g.rotation.x = 0.06; // slight list into the beach
+  return g;
+}
+
 export class Props {
   readonly group = new THREE.Group();
   readonly campfire: Campfire;
+  readonly wreck: Wreck | null;
   private clock = 0;
 
   constructor(spawn: THREE.Vector3) {
@@ -102,6 +193,15 @@ export class Props {
     fp.y = heightAt(fp.x, fp.z);
     this.campfire = buildCampfire(fp);
     this.group.add(this.campfire.group);
+
+    const wreckSpot = findWreckSpot(fp);
+    if (wreckSpot) {
+      const wreckGroup = buildWreck(wreckSpot);
+      this.group.add(wreckGroup);
+      this.wreck = { group: wreckGroup, position: wreckSpot.clone() };
+    } else {
+      this.wreck = null;
+    }
   }
 
   update(dt: number, daylight: number) {

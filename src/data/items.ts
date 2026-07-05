@@ -14,7 +14,13 @@ export type ItemId =
   | 'seamint_tea'
   | 'ember_chai'
   | 'drying_rack_kit'
-  | 'bird_bath_kit';
+  | 'bird_bath_kit'
+  | 'shovel'
+  | 'sand'
+  | 'dirt'
+  | 'loam'
+  | 'garden_bed_kit'
+  | 'lean_to_kit';
 
 export interface ItemDef {
   id: ItemId;
@@ -24,7 +30,7 @@ export interface ItemDef {
   /** teas can be drunk from the satchel */
   drinkable?: { buff: 'speed' | 'glow'; seconds: number };
   /** kits can be placed in the world */
-  placeable?: 'drying_rack' | 'bird_bath';
+  placeable?: 'drying_rack' | 'bird_bath' | 'garden_bed' | 'lean_to';
   /** fresh herbs can go on a drying rack */
   driesTo?: ItemId;
 }
@@ -65,6 +71,24 @@ export const ITEMS: ItemDef[] = [
     desc: 'A stone basin. Fill it with something warm and see who visits.',
     placeable: 'bird_bath',
   },
+  { id: 'shovel', name: 'Shovel', emoji: '🪏', desc: 'Scoops sand on the beach, dirt inland.' },
+  { id: 'sand', name: 'Sand', emoji: '🏖️', desc: 'Warm beach sand. Gardens want it.' },
+  { id: 'dirt', name: 'Dirt', emoji: '🟤', desc: 'Rich inland soil.' },
+  { id: 'loam', name: 'Loam', emoji: '🪴', desc: 'Sand, dirt, and algae worked together. Gardens love it.' },
+  {
+    id: 'garden_bed_kit',
+    name: 'Garden Bed',
+    emoji: '🌾',
+    desc: 'A planter frame. Fill with loam, grow herbs at home.',
+    placeable: 'garden_bed',
+  },
+  {
+    id: 'lean_to_kit',
+    name: 'Lean-To',
+    emoji: '⛺',
+    desc: 'A first roof. Sleep through the night.',
+    placeable: 'lean_to',
+  },
 ];
 
 export const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
@@ -83,10 +107,17 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_bird_bath', output: 'bird_bath_kit', outputQty: 1, inputs: { stone: 4, wood: 1 }, station: 'hand' },
   { id: 'r_seamint_tea', output: 'seamint_tea', outputQty: 1, inputs: { dried_seamint: 2, algae: 1 }, station: 'kettle' },
   { id: 'r_ember_chai', output: 'ember_chai', outputQty: 1, inputs: { dried_emberbloom: 2, dried_seamint: 1 }, station: 'kettle' },
+  { id: 'r_shovel', output: 'shovel', outputQty: 1, inputs: { wood: 2, stone: 1 }, station: 'hand' },
+  { id: 'r_loam', output: 'loam', outputQty: 2, inputs: { sand: 2, dirt: 2, algae: 1 }, station: 'hand' },
+  { id: 'r_garden_bed', output: 'garden_bed_kit', outputQty: 1, inputs: { wood: 1, loam: 2 }, station: 'hand' },
+  { id: 'r_lean_to', output: 'lean_to_kit', outputQty: 1, inputs: { wood: 6, stone: 2 }, station: 'hand' },
 ];
 
 /** seconds of real time for herbs to dry on a rack (60s = 4 in-game hours) */
 export const DRY_SECONDS = 60;
+
+/** seconds of real time for a planted garden crop to grow (90s = 6 in-game hours) */
+export const GROW_SECONDS = 90;
 
 // ---- gatherable herb clusters ----
 

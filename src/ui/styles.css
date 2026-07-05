@@ -66,6 +66,8 @@ body,
 #ui > .hud-buffs,
 #ui > .toast-box,
 #ui > .joystick,
+#ui > .guide-card,
+#ui > .sleep-fade,
 #ui > .satchel.hidden,
 #ui > .dialogue.hidden {
   pointer-events: none;
@@ -133,6 +135,70 @@ button {
 
 .buff-chip {
   background: rgba(232, 98, 61, 0.85);
+}
+
+/* ---------- the island asks ---------- */
+.guide-card {
+  position: absolute;
+  top: calc(140px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  max-width: 260px;
+  background: var(--night-glass);
+  color: var(--cream);
+  border-radius: 16px;
+  padding: 10px 14px;
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(253, 243, 223, 0.14);
+  text-align: right;
+  transition: opacity 0.2s;
+}
+
+.guide-card.hidden {
+  opacity: 0;
+}
+
+.guide-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: 4px;
+}
+
+.guide-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .guide-card {
+    max-width: 200px;
+    top: calc(120px + env(safe-area-inset-top));
+    padding: 8px 12px;
+  }
+
+  .guide-text {
+    font-size: 12px;
+  }
+
+  .guide-label {
+    font-size: 9px;
+  }
+}
+
+/* ---------- sleep fade ---------- */
+.sleep-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  z-index: 8;
+}
+
+.sleep-fade.hidden {
+  opacity: 0;
 }
 
 .icon-btn {
@@ -219,6 +285,22 @@ button {
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
+}
+
+.gather-btn.pop {
+  animation: action-pop 0.4s ease-out;
+}
+
+@keyframes action-pop {
+  0% {
+    transform: scale(0.7);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .gather-btn.danger {

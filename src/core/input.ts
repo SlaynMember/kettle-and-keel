@@ -51,8 +51,8 @@ export class Input {
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') e.preventDefault(); // never let the page scroll, even on OS key-repeat
+      if (e.code === 'Tab') e.preventDefault(); // must fire on repeats too, or held Tab walks focus into Chrome's UI
       if (e.repeat) return;
-      if (e.code === 'Tab') e.preventDefault(); // don't move browser focus
       this.keys.add(e.code);
       if (e.code === 'KeyE') this.fireInteract();
       if (e.code === 'Tab' || e.code === 'KeyI') this.panelHandlers.forEach((fn) => fn());

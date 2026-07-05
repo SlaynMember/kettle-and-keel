@@ -14,7 +14,7 @@ export class SatchelPanel {
   private title: HTMLDivElement;
   private kettleMode = false;
 
-  onPlace: ((kind: 'drying_rack' | 'bird_bath') => void) | null = null;
+  onPlace: ((kind: NonNullable<ItemDef['placeable']>) => void) | null = null;
   onDrink: ((buff: 'speed' | 'glow', seconds: number) => void) | null = null;
   private onToast: (msg: string) => void;
 

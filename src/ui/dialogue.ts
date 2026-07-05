@@ -7,7 +7,7 @@
 import type { DialogueLine } from '../data/dialogue';
 import { audio } from '../audio/audio';
 
-const CHARS_PER_SEC = 28;
+const CHARS_PER_SEC = 45;
 
 // player portrait is Will's hand-fed artwork (public/images/portrait-you.webp);
 // the gull stays code-drawn — its lopsided picasso energy is canon now

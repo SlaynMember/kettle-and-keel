@@ -25,7 +25,25 @@ export interface BathStructure {
   teaLoaded: boolean;
 }
 
-export type PlacedStructure = RackStructure | BathStructure;
+export interface GardenStructure {
+  type: 'garden_bed';
+  x: number;
+  z: number;
+  /** planted herb item id, or null if empty */
+  crop: string | null;
+  /** real seconds left until the crop is ready; only meaningful while a crop is planted */
+  secondsLeft: number;
+}
+
+export interface CampStructure {
+  type: 'lean_to';
+  x: number;
+  z: number;
+  /** 1 = lean-to, 2 = shack, 3 = cottage */
+  stage: 1 | 2 | 3;
+}
+
+export type PlacedStructure = RackStructure | BathStructure | GardenStructure | CampStructure;
 
 export interface Buffs {
   /** real seconds remaining */
@@ -44,6 +62,8 @@ export interface GameState {
   gullMet: boolean;
   /** has the first-night shooting star already played (once ever per save) */
   starSeen: boolean;
+  /** index into data/guidance.ts GOALS — how far the on-screen guide has advanced */
+  guideStep: number;
 }
 
 const SAVE_KEY = 'kk-save-v0'; // key kept stable; `version` field handles shape
@@ -67,6 +87,23 @@ function sanitizeStructure(p: unknown): PlacedStructure | null {
   if (s.type === 'bird_bath') {
     return { type: 'bird_bath', x: s.x, z: s.z, teaLoaded: !!s.teaLoaded };
   }
+  if (s.type === 'garden_bed') {
+    return {
+      type: 'garden_bed',
+      x: s.x,
+      z: s.z,
+      crop: typeof s.crop === 'string' ? s.crop : null,
+      secondsLeft: typeof s.secondsLeft === 'number' ? s.secondsLeft : 0,
+    };
+  }
+  if (s.type === 'lean_to') {
+    return {
+      type: 'lean_to',
+      x: s.x,
+      z: s.z,
+      stage: s.stage === 2 || s.stage === 3 ? s.stage : 1,
+    };
+  }
   return null;
 }
 
@@ -80,6 +117,7 @@ function load(): GameState {
     buffs: { speed: 0, glow: 0 },
     gullMet: false,
     starSeen: false,
+    guideStep: 0,
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -94,6 +132,7 @@ function load(): GameState {
       buffs: p.buffs && typeof p.buffs === 'object' ? { speed: p.buffs.speed || 0, glow: p.buffs.glow || 0 } : { speed: 0, glow: 0 },
       gullMet: !!p.gullMet,
       starSeen: !!p.starSeen,
+      guideStep: typeof p.guideStep === 'number' ? p.guideStep : 0,
     };
   } catch {
     return fallback;

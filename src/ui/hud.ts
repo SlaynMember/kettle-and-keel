@@ -17,6 +17,7 @@ export class Hud {
   private timeChip: HTMLElement;
   private buffBox: HTMLElement;
   private toastBox: HTMLElement;
+  private sleepFade: HTMLElement;
 
   constructor(root: HTMLElement, handlers: { onAction: () => void; onSatchel: () => void; onCancel: () => void }) {
     // top-left: compact inventory chips
@@ -76,6 +77,11 @@ export class Hud {
     this.toastBox.className = 'toast-box';
     root.appendChild(this.toastBox);
 
+    // full-screen fade for the sleep sequence; driven by main's tick loop, not CSS transitions
+    this.sleepFade = document.createElement('div');
+    this.sleepFade.className = 'sleep-fade hidden';
+    root.appendChild(this.sleepFade);
+
     store.subscribe((s) => {
       this.inv.innerHTML = '';
       const owned = ITEMS.filter((i) => (s.inventory[i.id] ?? 0) > 0);
@@ -95,15 +101,24 @@ export class Hud {
     });
   }
 
+  private lastActionLabel: string | null = null;
+
   /** the big context button; null hides it. danger renders the invalid-placement state */
   setAction(label: string | null, opts: { danger?: boolean; cancelable?: boolean } = {}) {
     if (label) {
       this.actionBtn.textContent = label;
       this.actionBtn.classList.remove('hidden');
       this.actionBtn.classList.toggle('danger', !!opts.danger);
+      // a fresh prompt bounces once so playtesters actually notice it appear
+      if (label !== this.lastActionLabel && !opts.danger) {
+        this.actionBtn.classList.remove('pop');
+        void this.actionBtn.offsetWidth; // restart the animation
+        this.actionBtn.classList.add('pop');
+      }
     } else {
       this.actionBtn.classList.add('hidden');
     }
+    this.lastActionLabel = label;
     this.cancelBtn.classList.toggle('hidden', !opts.cancelable);
   }
 
@@ -127,6 +142,17 @@ export class Hud {
       chip.textContent = `${icon} ${Math.ceil(secs)}s`;
       this.buffBox.appendChild(chip);
     }
+  }
+
+  /** 0 hides the fade entirely; otherwise sets its opacity directly (main.ts drives the curve) */
+  setSleepFade(opacity: number) {
+    if (opacity <= 0) {
+      this.sleepFade.style.opacity = '0';
+      this.sleepFade.classList.add('hidden');
+      return;
+    }
+    this.sleepFade.classList.remove('hidden');
+    this.sleepFade.style.opacity = String(opacity);
   }
 
   toast(msg: string) {

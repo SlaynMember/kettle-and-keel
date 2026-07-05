@@ -23,7 +23,7 @@ interface HerbCluster {
 const rng = makeRng(31337);
 
 /** low bushy beach mint: thin stems, paired rounded leaves, tiny flower spikes */
-function buildSeamint(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
+export function buildSeamint(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
   const group = new THREE.Group();
   const blossoms: THREE.Mesh[] = [];
   const stemMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });
@@ -74,7 +74,7 @@ function buildSeamint(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[
 }
 
 /** highland flower: broad rosette leaves at the base, daisy-like flower heads on rising stems */
-function buildEmberbloom(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
+export function buildEmberbloom(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
   const group = new THREE.Group();
   const blossoms: THREE.Mesh[] = [];
   const leafMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });

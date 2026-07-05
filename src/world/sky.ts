@@ -114,6 +114,13 @@ export class Sky {
     scene.fog = new THREE.Fog(0xbfe3ef, 70, 320);
   }
 
+  /** jump straight to morning (a lean-to's "Sleep until morning"); the natural midnight
+   *  wrap increments the day counter on its own, so a late-evening jump has to do it here */
+  sleepToMorning() {
+    if (this.time > 0.5) store.set({ day: store.get().day + 1 });
+    this.time = 0.27;
+  }
+
   /** 0 = full night, 1 = full day */
   get daylight(): number {
     return THREE.MathUtils.smoothstep(this.sample().sun, 0.02, 0.6);
