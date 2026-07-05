@@ -55,6 +55,9 @@ interface LiveRack {
 
 const FRESH_DRYABLE = ITEMS.filter((i) => i.driesTo);
 
+const FRESH_COLOR = new THREE.Color(0x86b85c);
+const DRIED_COLOR = new THREE.Color(0xb08a4f);
+
 export class Structures {
   readonly group = new THREE.Group();
   private racks: LiveRack[] = [];
@@ -142,9 +145,9 @@ export class Structures {
   private rackLabel(rack: LiveRack): string | null {
     const d = rack.data;
     if (d.drying && d.secondsLeft <= 0) return 'Collect Dried Leaves';
-    if (d.drying) return null; // busy drying — no prompt
+    if (d.drying) return `Drying… ${Math.ceil(d.secondsLeft)}s`;
     const hasFresh = FRESH_DRYABLE.some((i) => store.count(i.id) > 0);
-    return hasFresh ? 'Hang Herbs to Dry' : null;
+    return hasFresh ? 'Hang Herbs to Dry' : 'Drying Rack (gather fresh herbs)';
   }
 
   private useRack(rack: LiveRack) {
@@ -185,7 +188,7 @@ export class Structures {
     this.persist();
     this.syncBundles(rack);
     audio.sfx('sfx-cast');
-    this.onToast(`Herbs hung to dry (~${DRY_SECONDS}s)`);
+    this.onToast(`Herbs hung to dry — ready in ${DRY_SECONDS}s, watch them turn brown`);
   }
 
   private syncBundles(rack: LiveRack) {
@@ -193,9 +196,18 @@ export class Structures {
     const total = d.drying ? Object.values(d.drying).reduce((a, b) => a + b, 0) : 0;
     rack.bundles.forEach((b, i) => {
       b.visible = i < total;
-      const dry = d.drying !== null && d.secondsLeft <= 0;
-      (b.material as THREE.MeshLambertMaterial).color.set(dry ? 0xb08a4f : 0x86b85c);
     });
+    this.tintBundles(rack);
+  }
+
+  /** bundles shade green -> brown as drying progresses, so the wait is visible */
+  private tintBundles(rack: LiveRack) {
+    const d = rack.data;
+    const progress = d.drying ? 1 - Math.max(0, d.secondsLeft) / DRY_SECONDS : 0;
+    for (const b of rack.bundles) {
+      const m = b.material as THREE.MeshLambertMaterial;
+      m.color.copy(FRESH_COLOR).lerp(DRIED_COLOR, progress);
+    }
   }
 
   private persist() {
@@ -225,10 +237,10 @@ export class Structures {
       const d = rack.data;
       if (d.drying && d.secondsLeft > 0) {
         d.secondsLeft -= dt;
+        this.tintBundles(rack);
         if (d.secondsLeft <= 0) {
           d.secondsLeft = 0;
-          this.syncBundles(rack);
-          this.onToast('Herbs are dry!');
+          this.onToast('Herbs are dry — collect them at the rack!');
           dirty = true;
         }
       }

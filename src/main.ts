@@ -117,6 +117,7 @@ input.onEscape(() => {
 
 // ---- loop ----
 let started = false;
+let nightMusic = false; // hysteresis so the soundtrack doesn't flap at dusk
 const clock = new THREE.Clock();
 const idleInput = { move: { x: 0, y: 0 } } as Input;
 
@@ -141,8 +142,9 @@ function tick() {
   }
 
   // contextual soundtrack: workshop while crafting/placing, Hazy Tea Drift at night
+  if (nightMusic ? sky.daylight > 0.32 : sky.daylight < 0.2) nightMusic = !nightMusic;
   const musicCtx: MusicContext =
-    panel.isOpen || structures.placing ? 'workshop' : sky.daylight < 0.25 ? 'risk' : 'explore';
+    panel.isOpen || structures.placing ? 'workshop' : nightMusic ? 'risk' : 'explore';
   audio.setContext(musicCtx, dt);
   audio.update(dt);
 

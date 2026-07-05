@@ -3,12 +3,15 @@
  * original Kettle & Keel soundtrack, played CONTEXTUALLY:
  *
  *   explore  — Tiny Tea Boat        (default: wandering, gathering, day)
- *   workshop — Harbor Toy Workshop / Building (satchel, kettle, placing)
+ *   workshop — Harbor Toy Workshop  (satchel, kettle, placing)
  *   risk     — Hazy Tea Drift       (night — alert, not punished)
  *
- * (Beat the Drum lives in /music-reserve, waiting for boat crossings.)
- * Context switches crossfade over ~1.5s with a little hysteresis so quick
- * satchel peeks don't whiplash the music. Each track remembers its position.
+ * (Building + Beat the Drum live in /music-reserve, banked for island 2 and
+ * boat crossings.)
+ * Context switches crossfade over ~4s, need the new context to hold for a few
+ * seconds, and never fire within MIN_PLAY_SECONDS of the last switch — so
+ * quick satchel peeks and dusk flicker don't whiplash the music. Each track
+ * remembers its playback position.
  */
 import { store } from '../core/store';
 
@@ -16,14 +19,15 @@ export type MusicContext = 'explore' | 'workshop' | 'risk';
 
 const TRACKS: Record<MusicContext, string[]> = {
   explore: ['tiny-tea-boat'],
-  workshop: ['harbor-toy-workshop', 'building'],
+  workshop: ['harbor-toy-workshop'],
   risk: ['hazy-tea-drift'],
 };
 
 const MUSIC_KEY = 'kk-music-v2';
 const BGM_VOLUME = 0.4;
-const FADE_SECONDS = 1.5;
-const CONTEXT_DEBOUNCE = 1.2; // seconds a new context must persist before switching
+const FADE_SECONDS = 4;
+const CONTEXT_DEBOUNCE = 3; // seconds a new context must persist before switching
+const MIN_PLAY_SECONDS = 12; // once a track starts, let it breathe before any switch
 
 const SFX_VOLUMES: Record<string, number> = {
   'sfx-pickup': 0.5,
@@ -42,7 +46,7 @@ class AudioManager {
   private pending: MusicContext | null = null;
   private pendingFor = 0;
   private positions: Record<string, number> = {};
-  private workshopFlip = 0;
+  private sincePlay = 0;
 
   /** Must be called from a user gesture (the "tap to begin" overlay). */
   unlock() {
@@ -76,7 +80,7 @@ class AudioManager {
       return;
     }
     this.pendingFor += dt;
-    if (this.pendingFor >= CONTEXT_DEBOUNCE) {
+    if (this.pendingFor >= CONTEXT_DEBOUNCE && this.sincePlay >= MIN_PLAY_SECONDS) {
       this.context = ctx;
       this.pending = null;
       this.crossfadeTo(this.pickTrack(ctx));
@@ -85,6 +89,7 @@ class AudioManager {
 
   /** advance fades; called every frame */
   update(dt: number) {
+    this.sincePlay += dt;
     if (this.fading) {
       this.fading.volume = Math.max(0, this.fading.volume - (BGM_VOLUME / FADE_SECONDS) * dt);
       if (this.fading.volume <= 0.01) {
@@ -98,16 +103,12 @@ class AudioManager {
   }
 
   private pickTrack(ctx: MusicContext): string {
-    const list = TRACKS[ctx];
-    if (ctx === 'workshop') {
-      this.workshopFlip = (this.workshopFlip + 1) % list.length;
-      return list[this.workshopFlip];
-    }
-    return list[0];
+    return TRACKS[ctx][0];
   }
 
   private startTrack(name: string, fadeIn = false) {
     this.currentTrack = name;
+    this.sincePlay = 0;
     const a = new Audio(`/audio/${name}.mp3`);
     a.loop = true;
     a.volume = fadeIn ? 0 : BGM_VOLUME;
