@@ -68,8 +68,10 @@ body,
 #ui > .joystick,
 #ui > .guide-card,
 #ui > .sleep-fade,
+#ui > .discovery-card,
 #ui > .satchel.hidden,
-#ui > .dialogue.hidden {
+#ui > .dialogue.hidden,
+#ui > .note-card.hidden {
   pointer-events: none;
 }
 
@@ -578,6 +580,28 @@ img.recipe-glyph {
   opacity: 0.4;
 }
 
+.cost.unknown {
+  opacity: 0.4;
+}
+
+.recipe-row-mystery {
+  opacity: 0.75;
+}
+
+.recipe-mystery {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(138, 90, 59, 0.18);
+  color: var(--wood);
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 2px;
+}
+
 .recipe-btn {
   border: none;
   border-radius: 999px;
@@ -805,4 +829,114 @@ img.recipe-glyph {
   .dialogue-text {
     font-size: 15px;
   }
+}
+
+/* ---------- discovery card ---------- */
+.discovery-card {
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(320px, calc(100vw - 32px));
+  background: var(--parchment);
+  color: var(--ink);
+  border: 2px solid rgba(138, 90, 59, 0.35);
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 22px rgba(43, 30, 20, 0.3);
+  z-index: 4;
+  transition: opacity 0.2s;
+}
+
+.discovery-card.hidden {
+  opacity: 0;
+}
+
+.discovery-card.pop {
+  animation: discovery-in 0.3s ease-out;
+}
+
+@keyframes discovery-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-14px) scale(0.94);
+  }
+}
+
+.discovery-glyph {
+  flex-shrink: 0;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.discovery-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sunset-dark);
+}
+
+.discovery-flavor {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.3;
+  opacity: 0.85;
+}
+
+img.discovery-glyph-img {
+  width: 30px;
+  height: 30px;
+}
+
+/* ---------- bottle note ---------- */
+.note-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(360px, calc(100vw - 64px));
+  background: var(--parchment);
+  color: var(--ink);
+  border: 3px solid var(--wood);
+  border-radius: 10px;
+  padding: 22px 24px;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(20, 15, 8, 0.45);
+  cursor: pointer;
+  z-index: 6;
+  transform: translate(-50%, -50%) rotate(-1.5deg);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+.note-card.hidden {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(-1.5deg) scale(0.92);
+}
+
+.note-caption {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wood);
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.note-text {
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.note-hint {
+  margin-top: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
 }

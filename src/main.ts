@@ -9,6 +9,7 @@ import { Sky } from './world/sky';
 import { Water } from './world/water';
 import { Props } from './world/props';
 import { DriftingLeaves } from './world/leaves';
+import { BeachFinds } from './world/beachfinds';
 import { Player } from './entities/player';
 import { HerbField } from './entities/herbs';
 import { ResourceField } from './entities/resources';
@@ -19,8 +20,11 @@ import { Hud } from './ui/hud';
 import { SatchelPanel } from './ui/panel';
 import { DialoguePanel } from './ui/dialogue';
 import { GuideCard } from './ui/guide';
+import { Cards } from './ui/cards';
 import { MEET_GULL, GULL_CHATTER } from './data/dialogue';
 import { GOALS, PRAISE_LINES } from './data/guidance';
+import { ITEM_BY_ID, type ItemId } from './data/items';
+import { FLAVOR } from './data/flavor';
 import { audio, type MusicContext } from './audio/audio';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -77,6 +81,9 @@ scene.add(structures.group);
 const gull = new Gull();
 scene.add(gull.group);
 
+const beachFinds = new BeachFinds(toast);
+scene.add(beachFinds.group);
+
 const star = new ShootingStar();
 scene.add(star.group);
 
@@ -87,6 +94,10 @@ const input = new Input(canvas, uiRoot);
 const panel = new SatchelPanel(uiRoot, toast);
 const dialogue = new DialoguePanel(uiRoot);
 const guide = new GuideCard(uiRoot);
+const cards = new Cards(uiRoot);
+beachFinds.onNote = (text) => {
+  cards.note(text);
+};
 
 hud = new Hud(uiRoot, {
   onAction: () => triggerAction(),
@@ -170,6 +181,28 @@ function advanceGuide() {
 }
 let guideCheckTimer = 0;
 
+// discovery cards: the first time an item is ever owned earns a flavor card.
+// An existing save's starting inventory must not spray cards on boot, so
+// while the intro hasn't been dismissed yet this only back-fills silently.
+function checkDiscoveries() {
+  const s = store.get();
+  const owned = Object.entries(s.inventory)
+    .filter(([, qty]) => (qty ?? 0) > 0)
+    .map(([id]) => id);
+  const fresh = owned.filter((id) => !s.discovered.includes(id));
+  if (fresh.length === 0) return;
+  if (!started) {
+    store.set({ discovered: [...s.discovered, ...fresh] });
+    return;
+  }
+  for (const id of fresh) {
+    store.set({ discovered: [...store.get().discovered, id] });
+    const flavor = FLAVOR[id as ItemId];
+    const item = ITEM_BY_ID.get(id as ItemId);
+    if (flavor && item) cards.discovery(item, flavor);
+  }
+}
+
 // the sleep sequence: a full-screen fade timed off the shared clock, not setTimeout
 let sleeping = false;
 let sleepTimer = 0;
@@ -221,6 +254,10 @@ function stopWatchingStar() {
 
 function triggerAction() {
   if (sleeping) return;
+  if (cards.noteOpen) {
+    cards.closeNote();
+    return;
+  }
   if (dialogue.isOpen) {
     dialogue.advance();
     return;
@@ -264,7 +301,7 @@ function tick() {
     rig.yaw += dt * 0.05; // slow establishing orbit behind the intro overlay
   }
   input.update();
-  player.update(dt, started && !panel.isOpen && !dialogue.isOpen && !sleeping ? input : idleInput, rig.yaw);
+  player.update(dt, started && !panel.isOpen && !dialogue.isOpen && !sleeping && !cards.noteOpen ? input : idleInput, rig.yaw);
 
   // buffs
   buffs.speed = Math.max(0, buffs.speed - dt);
@@ -288,13 +325,19 @@ function tick() {
     }
   }
 
-  // homestead guidance: cheap check, not every frame
+  // homestead guidance + discovery tracking: cheap checks, not every frame
   guideCheckTimer += dt;
   if (guideCheckTimer >= 0.5) {
     guideCheckTimer = 0;
     advanceGuide();
+    checkDiscoveries();
   }
   guide.setGoal(!started || dialogue.isOpen ? null : GOALS[store.get().guideStep].text);
+  cards.update(dt);
+
+  // morning washed-ashore find: spawns once at dawn, then sits until collected or the tide takes it
+  beachFinds.spawnIfDue(store.get().day, sky.time, spawn);
+  beachFinds.update(dt);
 
   // sleep sequence: fade to black, jump the clock, fade back — timed off dt, no setTimeout chains
   if (sleeping) {
@@ -353,7 +396,7 @@ function tick() {
   rig.update(dt, input, player.position);
 
   // context button: placement wins, then the star-watch prompt, then the nearest interactable
-  if (!started || panel.isOpen || dialogue.isOpen || sleeping) {
+  if (!started || panel.isOpen || dialogue.isOpen || sleeping || cards.noteOpen) {
     hud.setAction(null);
   } else if (structures.placing) {
     hud.setAction(structures.placementLabel(), { danger: !structures.placementLabel().startsWith('Place'), cancelable: true });
@@ -388,4 +431,6 @@ hud.showIntro().then(() => {
 tick();
 
 // dev/debug handle (also how automated playtests drive the game)
-Object.assign(window, { __kk: { player, rig, sky, camera, heightAt, store, structures, gull, star, buffs, audio, panel, dialogue } });
+Object.assign(window, {
+  __kk: { player, rig, sky, camera, heightAt, store, structures, gull, star, buffs, audio, panel, dialogue, cards, beachFinds },
+});

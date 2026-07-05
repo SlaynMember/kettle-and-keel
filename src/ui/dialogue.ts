@@ -12,7 +12,15 @@ const CHARS_PER_SEC = 45;
 // both portraits are generated cut-paper artwork (content-drop sources,
 // shipped from public/images/portraits/) — Biscuit kept the eyebrow
 const YOU_IMG = `<img src="/images/portraits/you.webp" alt="You"/>`;
-const GULL_IMG = `<img src="/images/portraits/biscuit.webp" alt="Gull"/>`;
+const GULL_NEUTRAL = '/images/portraits/biscuit.webp';
+const GULL_IMG = `<img src="${GULL_NEUTRAL}" alt="Gull"/>`;
+
+/** mood -> portrait swap; a gull line with no mood (or a 'you' line) shows neutral */
+const GULL_MOOD_SRC: Record<NonNullable<DialogueLine['mood']>, string> = {
+  annoyed: '/images/portraits/biscuit-annoyed.webp',
+  smug: '/images/portraits/biscuit-smug.webp',
+  pleased: '/images/portraits/biscuit-pleased.webp',
+};
 
 export class DialoguePanel {
   private el: HTMLDivElement;
@@ -21,6 +29,7 @@ export class DialoguePanel {
   private hintEl: HTMLDivElement;
   private portraitYou: HTMLDivElement;
   private portraitGull: HTMLDivElement;
+  private gullImg: HTMLImageElement;
 
   private lines: DialogueLine[] = [];
   private lineIndex = 0;
@@ -48,6 +57,7 @@ export class DialoguePanel {
     this.hintEl = this.el.querySelector('.dialogue-hint')!;
     this.portraitYou = this.el.querySelector('.dialogue-portrait.you')!;
     this.portraitGull = this.el.querySelector('.dialogue-portrait.gull')!;
+    this.gullImg = this.portraitGull.querySelector('img')!;
     this.el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.advance();
@@ -94,6 +104,7 @@ export class DialoguePanel {
     this.nameEl.textContent = line.speaker === 'you' ? 'You' : 'Gull';
     this.portraitYou.classList.toggle('active', line.speaker === 'you');
     this.portraitGull.classList.toggle('active', line.speaker === 'gull');
+    this.gullImg.src = line.speaker === 'gull' && line.mood ? GULL_MOOD_SRC[line.mood] : GULL_NEUTRAL;
     this.hintEl.classList.add('hidden');
     this.textEl.textContent = '';
     this.typing = true;

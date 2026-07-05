@@ -64,6 +64,18 @@ export interface GameState {
   starSeen: boolean;
   /** index into data/guidance.ts GOALS — how far the on-screen guide has advanced */
   guideStep: number;
+  /** item ids the player has ever owned; gates discovery cards + mystery recipes */
+  discovered: string[];
+  /** today's washed-ashore beach find, or null before one has spawned */
+  beachFind: BeachFind | null;
+}
+
+export interface BeachFind {
+  day: number;
+  kind: string;
+  x: number;
+  z: number;
+  collected: boolean;
 }
 
 const SAVE_KEY = 'kk-save-v0'; // key kept stable; `version` field handles shape
@@ -107,6 +119,16 @@ function sanitizeStructure(p: unknown): PlacedStructure | null {
   return null;
 }
 
+/** drop malformed/legacy shapes rather than let a bad save wedge the tide */
+function sanitizeBeachFind(p: unknown): BeachFind | null {
+  if (!p || typeof p !== 'object') return null;
+  const b = p as Record<string, unknown>;
+  if (typeof b.day !== 'number' || typeof b.kind !== 'string' || typeof b.x !== 'number' || typeof b.z !== 'number') {
+    return null;
+  }
+  return { day: b.day, kind: b.kind, x: b.x, z: b.z, collected: !!b.collected };
+}
+
 function load(): GameState {
   const fallback: GameState = {
     version: 1,
@@ -118,6 +140,8 @@ function load(): GameState {
     gullMet: false,
     starSeen: false,
     guideStep: 0,
+    discovered: [],
+    beachFind: null,
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -133,6 +157,8 @@ function load(): GameState {
       gullMet: !!p.gullMet,
       starSeen: !!p.starSeen,
       guideStep: typeof p.guideStep === 'number' ? p.guideStep : 0,
+      discovered: Array.isArray(p.discovered) ? p.discovered.filter((d: unknown): d is string => typeof d === 'string') : [],
+      beachFind: sanitizeBeachFind(p.beachFind),
     };
   } catch {
     return fallback;

@@ -3,8 +3,8 @@
  * mobile satchel button. At the kettle it opens in brew mode with the
  * kettle recipes unlocked.
  */
-import { store } from '../core/store';
-import { ITEMS, RECIPES, ITEM_BY_ID, itemGlyph, type ItemDef } from '../data/items';
+import { store, type Inventory } from '../core/store';
+import { ITEMS, RECIPES, ITEM_BY_ID, itemGlyph, type ItemDef, type RecipeDef } from '../data/items';
 import { audio } from '../audio/audio';
 
 export class SatchelPanel {
@@ -67,6 +67,7 @@ export class SatchelPanel {
 
   private render() {
     const inv = store.get().inventory;
+    const discovered = store.get().discovered;
 
     // inventory grid
     this.grid.innerHTML = '';
@@ -95,6 +96,22 @@ export class SatchelPanel {
     const recipes = RECIPES.filter((r) => (this.kettleMode ? true : r.station === 'hand'));
     for (const r of recipes) {
       const out = ITEM_BY_ID.get(r.output)!;
+
+      // mystery gating: the rack/bath/garden/lean-to kits are guidance-goal targets
+      // (hiding them would strand the guide chain), so hand recipes that place them
+      // always render normally. Everything else — kettle brews, plus the non-placeable
+      // hand recipes (loam, shovel) — is masked until its ingredients are all known.
+      const isGuidanceKit = r.station === 'hand' && !!out.placeable;
+      if (!isGuidanceKit) {
+        const inputIds = Object.keys(r.inputs);
+        const knownCount = inputIds.filter((id) => discovered.includes(id)).length;
+        if (knownCount === 0) continue; // nothing known yet — don't even tease it
+        if (knownCount < inputIds.length) {
+          this.renderMysteryRow(r, inv, discovered);
+          continue;
+        }
+      }
+
       const row = document.createElement('div');
       row.className = 'recipe-row';
       const atStation = r.station === 'hand' || this.kettleMode;
@@ -123,6 +140,30 @@ export class SatchelPanel {
       row.appendChild(btn);
       this.recipeBox.appendChild(row);
     }
+  }
+
+  /** at least one input known, but not all — output and unmet inputs stay masked */
+  private renderMysteryRow(r: RecipeDef, inv: Inventory, discovered: string[]) {
+    const row = document.createElement('div');
+    row.className = 'recipe-row recipe-row-mystery';
+    row.title = "You haven't met every ingredient yet.";
+    const costs = Object.entries(r.inputs)
+      .map(([id, q]) => {
+        if (!discovered.includes(id)) return '<span class="cost unknown">?</span>';
+        const def = ITEM_BY_ID.get(id as never)!;
+        const have = inv[id] ?? 0;
+        return `<span class="cost ${have >= (q ?? 0) ? 'ok' : 'short'}">${itemGlyph(def, 'cost-glyph')}${q}</span>`;
+      })
+      .join('');
+    row.innerHTML = `
+      <span class="recipe-out"><span class="recipe-mystery">?</span> <b>????</b></span>
+      <span class="recipe-costs">${costs}</span>`;
+    const btn = document.createElement('button');
+    btn.className = 'recipe-btn';
+    btn.textContent = 'Unknown';
+    btn.disabled = true;
+    row.appendChild(btn);
+    this.recipeBox.appendChild(row);
   }
 
   private itemAction(item: ItemDef): { label: string; fn: () => void } | null {
