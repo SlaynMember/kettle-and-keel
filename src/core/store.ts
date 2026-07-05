@@ -7,7 +7,7 @@ export interface Inventory {
   [itemId: string]: number;
 }
 
-export interface PlacedStructure {
+export interface RackStructure {
   type: 'drying_rack';
   x: number;
   z: number;
@@ -16,6 +16,16 @@ export interface PlacedStructure {
   /** real seconds left until dry; only meaningful while drying */
   secondsLeft: number;
 }
+
+export interface BathStructure {
+  type: 'bird_bath';
+  x: number;
+  z: number;
+  /** true once the player has poured a warm brew in */
+  teaLoaded: boolean;
+}
+
+export type PlacedStructure = RackStructure | BathStructure;
 
 export interface Buffs {
   /** real seconds remaining */
@@ -30,11 +40,33 @@ export interface GameState {
   muted: boolean;
   structures: PlacedStructure[];
   buffs: Buffs;
+  /** has the player talked to the seagull for the first time */
+  gullMet: boolean;
 }
 
 const SAVE_KEY = 'kk-save-v0'; // key kept stable; `version` field handles shape
 
 type Listener = (state: GameState) => void;
+
+/** keep only known structure shapes across save-format changes; drop the rest */
+function sanitizeStructure(p: unknown): PlacedStructure | null {
+  if (!p || typeof p !== 'object') return null;
+  const s = p as Record<string, unknown>;
+  if (typeof s.x !== 'number' || typeof s.z !== 'number') return null;
+  if (s.type === 'drying_rack') {
+    return {
+      type: 'drying_rack',
+      x: s.x,
+      z: s.z,
+      drying: typeof s.drying === 'object' && s.drying ? (s.drying as Inventory) : null,
+      secondsLeft: typeof s.secondsLeft === 'number' ? s.secondsLeft : 0,
+    };
+  }
+  if (s.type === 'bird_bath') {
+    return { type: 'bird_bath', x: s.x, z: s.z, teaLoaded: !!s.teaLoaded };
+  }
+  return null;
+}
 
 function load(): GameState {
   const fallback: GameState = {
@@ -44,6 +76,7 @@ function load(): GameState {
     muted: false,
     structures: [],
     buffs: { speed: 0, glow: 0 },
+    gullMet: false,
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -54,8 +87,9 @@ function load(): GameState {
       inventory: typeof p.inventory === 'object' && p.inventory ? p.inventory : {},
       day: typeof p.day === 'number' ? p.day : 1,
       muted: !!p.muted,
-      structures: Array.isArray(p.structures) ? p.structures : [],
+      structures: Array.isArray(p.structures) ? p.structures.map(sanitizeStructure).filter((s: unknown): s is PlacedStructure => s !== null) : [],
       buffs: p.buffs && typeof p.buffs === 'object' ? { speed: p.buffs.speed || 0, glow: p.buffs.glow || 0 } : { speed: 0, glow: 0 },
+      gullMet: !!p.gullMet,
     };
   } catch {
     return fallback;

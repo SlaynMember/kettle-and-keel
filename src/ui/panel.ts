@@ -14,7 +14,7 @@ export class SatchelPanel {
   private title: HTMLDivElement;
   private kettleMode = false;
 
-  onPlace: (() => void) | null = null;
+  onPlace: ((kind: 'drying_rack' | 'bird_bath') => void) | null = null;
   onDrink: ((buff: 'speed' | 'glow', seconds: number) => void) | null = null;
   private onToast: (msg: string) => void;
 
@@ -139,11 +139,12 @@ export class SatchelPanel {
       };
     }
     if (item.placeable) {
+      const kind = item.placeable;
       return {
         label: 'Place',
         fn: () => {
           this.close();
-          this.onPlace?.();
+          this.onPlace?.(kind);
         },
       };
     }

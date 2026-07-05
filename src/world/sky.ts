@@ -21,8 +21,8 @@ const KEYS: SkyKey[] = [
   { t: 0.0, zenith: 0x0b1026, horizon: 0x1a2f38, sun: 0.0, ambient: 0.25 },
   { t: 0.22, zenith: 0x1a2f4f, horizon: 0x5a4a58, sun: 0.05, ambient: 0.3 },
   { t: 0.28, zenith: 0x4d7ea8, horizon: 0xf4a26b, sun: 0.55, ambient: 0.55 },
-  { t: 0.4, zenith: 0x5aa9d6, horizon: 0xbfe3ef, sun: 1.0, ambient: 0.8 },
-  { t: 0.6, zenith: 0x5aa9d6, horizon: 0xbfe3ef, sun: 1.0, ambient: 0.8 },
+  { t: 0.4, zenith: 0x63add2, horizon: 0xcfe6da, sun: 1.0, ambient: 0.8 },
+  { t: 0.6, zenith: 0x63add2, horizon: 0xcfe6da, sun: 1.0, ambient: 0.8 },
   { t: 0.72, zenith: 0x4d6ea8, horizon: 0xf49b5b, sun: 0.55, ambient: 0.55 },
   { t: 0.78, zenith: 0x1c2447, horizon: 0xb35a4a, sun: 0.05, ambient: 0.3 },
   { t: 1.0, zenith: 0x0b1026, horizon: 0x1a2f38, sun: 0.0, ambient: 0.25 },
@@ -68,7 +68,7 @@ export class Sky {
     this.dome.frustumCulled = false;
     scene.add(this.dome);
 
-    this.sun = new THREE.DirectionalLight(0xfff2d8, 1.0);
+    this.sun = new THREE.DirectionalLight(0xffeac2, 1.0);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const s = 90;
@@ -83,7 +83,7 @@ export class Sky {
     this.moon = new THREE.DirectionalLight(0x8ea6c8, 0.0);
     scene.add(this.moon, this.moon.target);
 
-    this.hemi = new THREE.HemisphereLight(0xbfe3ef, 0x6da24d, 0.8);
+    this.hemi = new THREE.HemisphereLight(0xbfe3ef, 0x7f9c53, 0.8);
     scene.add(this.hemi);
 
     // stars

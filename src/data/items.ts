@@ -13,7 +13,8 @@ export type ItemId =
   | 'dried_emberbloom'
   | 'seamint_tea'
   | 'ember_chai'
-  | 'drying_rack_kit';
+  | 'drying_rack_kit'
+  | 'bird_bath_kit';
 
 export interface ItemDef {
   id: ItemId;
@@ -23,7 +24,7 @@ export interface ItemDef {
   /** teas can be drunk from the satchel */
   drinkable?: { buff: 'speed' | 'glow'; seconds: number };
   /** kits can be placed in the world */
-  placeable?: 'drying_rack';
+  placeable?: 'drying_rack' | 'bird_bath';
   /** fresh herbs can go on a drying rack */
   driesTo?: ItemId;
 }
@@ -57,6 +58,13 @@ export const ITEMS: ItemDef[] = [
     desc: 'Place it, load fresh herbs, come back for dried leaves.',
     placeable: 'drying_rack',
   },
+  {
+    id: 'bird_bath_kit',
+    name: 'Bird Bath',
+    emoji: '⛲',
+    desc: 'A stone basin. Fill it with something warm and see who visits.',
+    placeable: 'bird_bath',
+  },
 ];
 
 export const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
@@ -72,6 +80,7 @@ export interface RecipeDef {
 
 export const RECIPES: RecipeDef[] = [
   { id: 'r_rack', output: 'drying_rack_kit', outputQty: 1, inputs: { wood: 4, stone: 2 }, station: 'hand' },
+  { id: 'r_bird_bath', output: 'bird_bath_kit', outputQty: 1, inputs: { stone: 4, wood: 1 }, station: 'hand' },
   { id: 'r_seamint_tea', output: 'seamint_tea', outputQty: 1, inputs: { dried_seamint: 2, algae: 1 }, station: 'kettle' },
   { id: 'r_ember_chai', output: 'ember_chai', outputQty: 1, inputs: { dried_emberbloom: 2, dried_seamint: 1 }, station: 'kettle' },
 ];
@@ -101,9 +110,9 @@ export const HERBS: HerbDef[] = [
   {
     id: 'seamint',
     name: 'Seamint',
-    color: 0x9fd8cb,
-    blossom: 0x63bfae,
-    count: 26,
+    color: 0x87b28e,
+    blossom: 0xaec4e8,
+    count: 14,
     minH: 0.9,
     maxH: 5,
     respawn: 60,
@@ -111,9 +120,9 @@ export const HERBS: HerbDef[] = [
   {
     id: 'emberbloom',
     name: 'Emberbloom',
-    color: 0x7c8f4e,
+    color: 0x74884f,
     blossom: 0xe8623d,
-    count: 10,
+    count: 7,
     minH: 4.5,
     maxH: 14,
     respawn: 90,

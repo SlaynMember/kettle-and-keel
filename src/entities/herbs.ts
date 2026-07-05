@@ -22,31 +22,130 @@ interface HerbCluster {
 
 const rng = makeRng(31337);
 
-function buildCluster(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
+/** low bushy beach mint: thin stems, paired rounded leaves, tiny flower spikes */
+function buildSeamint(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
   const group = new THREE.Group();
   const blossoms: THREE.Mesh[] = [];
-  const leafMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });
+  const stemMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });
   const blossomMat = new THREE.MeshLambertMaterial({
     color: def.blossom,
     emissive: def.blossom,
     emissiveIntensity: 0.12,
     flatShading: true,
   });
-  const stems = 3 + Math.floor(rng() * 3);
-  for (let i = 0; i < stems; i++) {
-    const h = 0.5 + rng() * 0.4;
-    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.16, h, 5), leafMat);
-    leaf.position.set((rng() - 0.5) * 0.6, h / 2, (rng() - 0.5) * 0.6);
-    leaf.rotation.z = (rng() - 0.5) * 0.5;
-    group.add(leaf);
-    if (rng() > 0.4) {
-      const blossom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 0), blossomMat);
-      blossom.position.set(leaf.position.x, h + 0.02, leaf.position.z);
-      group.add(blossom);
-      blossoms.push(blossom);
+
+  const stemCount = 2 + Math.floor(rng() * 3); // 2-4
+  for (let s = 0; s < stemCount; s++) {
+    const h = 0.34 + rng() * 0.18;
+    const stemGroup = new THREE.Group();
+    stemGroup.position.set((rng() - 0.5) * 0.24, 0, (rng() - 0.5) * 0.24);
+    stemGroup.rotation.z = (rng() - 0.5) * 0.4;
+    stemGroup.rotation.x = (rng() - 0.5) * 0.3;
+
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.024, h, 5), stemMat);
+    stem.position.y = h / 2;
+    stemGroup.add(stem);
+
+    const pairCount = 2 + Math.floor(rng() * 2); // 2-3 pairs, alternating up the stem
+    for (let p = 0; p < pairCount; p++) {
+      const leafY = ((p + 1) / (pairCount + 1)) * h;
+      for (const dir of [-1, 1]) {
+        const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08 + rng() * 0.02, 0), stemMat);
+        leaf.scale.y = 0.4;
+        leaf.position.set(dir * (0.11 + rng() * 0.03), leafY, 0);
+        leaf.rotation.z = dir * (1.0 + rng() * 0.3);
+        leaf.rotation.y = rng() * Math.PI;
+        stemGroup.add(leaf);
+      }
     }
+
+    const tipCount = 2 + Math.floor(rng() * 2); // 2-3 tiny spheres per spike
+    for (let t = 0; t < tipCount; t++) {
+      const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.042, 6, 5), blossomMat);
+      bloom.position.set((rng() - 0.5) * 0.06, h + 0.03 + t * 0.04, (rng() - 0.5) * 0.06);
+      stemGroup.add(bloom);
+      blossoms.push(bloom);
+    }
+
+    group.add(stemGroup);
   }
+
   return { group, blossoms };
+}
+
+/** highland flower: broad rosette leaves at the base, daisy-like flower heads on rising stems */
+function buildEmberbloom(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const blossoms: THREE.Mesh[] = [];
+  const leafMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });
+  const stemMat = new THREE.MeshLambertMaterial({ color: def.color, flatShading: true });
+  const centerMat = new THREE.MeshLambertMaterial({
+    color: 0xf4b860,
+    emissive: 0xf4b860,
+    emissiveIntensity: 0.12,
+    flatShading: true,
+  });
+  const petalMat = new THREE.MeshLambertMaterial({
+    color: def.blossom,
+    emissive: def.blossom,
+    emissiveIntensity: 0.12,
+    flatShading: true,
+  });
+
+  // base rosette
+  const leafCount = 4 + Math.floor(rng() * 2); // 4-5
+  for (let i = 0; i < leafCount; i++) {
+    const a = (i / leafCount) * Math.PI * 2 + rng() * 0.3;
+    const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15 + rng() * 0.02, 0), leafMat);
+    leaf.scale.y = 0.3;
+    leaf.position.set(Math.cos(a) * 0.1, 0.06, Math.sin(a) * 0.1);
+    leaf.rotation.y = -a;
+    leaf.rotation.x = -0.35 - rng() * 0.15; // angled slightly up
+    group.add(leaf);
+  }
+
+  // flower stems rising from the rosette
+  const stemCount = 2 + Math.floor(rng() * 2); // 2-3
+  for (let s = 0; s < stemCount; s++) {
+    const h = 0.5 + rng() * 0.18;
+    const stemGroup = new THREE.Group();
+    stemGroup.position.set((rng() - 0.5) * 0.14, 0, (rng() - 0.5) * 0.14);
+    stemGroup.rotation.z = (rng() - 0.5) * 0.2;
+    stemGroup.rotation.x = (rng() - 0.5) * 0.2;
+
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, h, 5), stemMat);
+    stem.position.y = h / 2;
+    stemGroup.add(stem);
+
+    const headGroup = new THREE.Group();
+    headGroup.position.y = h;
+
+    const center = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0), centerMat);
+    headGroup.add(center);
+    blossoms.push(center);
+
+    const petalCount = 5 + Math.floor(rng() * 2); // 5-6
+    for (let p = 0; p < petalCount; p++) {
+      const pa = (p / petalCount) * Math.PI * 2;
+      const petal = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), petalMat);
+      petal.scale.y = 0.25;
+      petal.position.set(Math.cos(pa) * 0.09, 0.01, Math.sin(pa) * 0.09);
+      petal.rotation.z = Math.cos(pa) * 0.5;
+      petal.rotation.x = Math.sin(pa) * 0.5;
+      petal.rotation.y = pa;
+      headGroup.add(petal);
+      blossoms.push(petal);
+    }
+
+    stemGroup.add(headGroup);
+    group.add(stemGroup);
+  }
+
+  return { group, blossoms };
+}
+
+function buildCluster(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
+  return def.id === 'seamint' ? buildSeamint(def) : buildEmberbloom(def);
 }
 
 export class HerbField {

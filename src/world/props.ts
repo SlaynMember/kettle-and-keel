@@ -25,7 +25,7 @@ function scatterPoint(minH: number, maxH: number, maxSlope: number): THREE.Vecto
 function grassTuft(): THREE.Mesh {
   const m = new THREE.Mesh(
     new THREE.ConeGeometry(0.28, 0.55 + rng() * 0.3, 5),
-    new THREE.MeshLambertMaterial({ color: 0x97c368, flatShading: true })
+    new THREE.MeshLambertMaterial({ color: 0xa4bd6e, flatShading: true })
   );
   m.rotation.z = (rng() - 0.5) * 0.35;
   return m;
@@ -90,7 +90,7 @@ export class Props {
   private clock = 0;
 
   constructor(spawn: THREE.Vector3) {
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 55; i++) {
       const p = scatterPoint(1.5, 8, 0.5);
       if (!p) continue;
       const gr = grassTuft();
