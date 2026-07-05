@@ -12,7 +12,14 @@ const SPEED = 7;
 const SWIM_SPEED = 3.6;
 const TURN_LERP = 12;
 const SWIM_START = -0.8; // terrain below this = swimming
-const SWIM_Y = SEA_LEVEL - 0.85; // body sits low in the water
+const SWIM_Y = SEA_LEVEL - 0.85; // body sits low in the water — the surface cap, never exceeded
+const JUMP_SPEED = 5.2;
+const GRAVITY = 14;
+const PADDLE_UP_RATE = 3.2; // holding Space while swimming
+const BUOYANCY_RATE = 1.1; // natural rise back to the surface otherwise
+const TREAD_LEAN = 0.22; // idle in water: mostly upright, slight forward lean
+const PRONE_ANGLE = 1.4; // ~80deg forward pitch while swimming and moving
+const PRONE_EASE = 4; // ~0.25s ease into/out of the prone swim pose
 
 export type PlayerAction = 'none' | 'punch' | 'gather';
 
@@ -31,6 +38,11 @@ export class Player {
   private action: PlayerAction = 'none';
   private actionTimer = 0;
 
+  private vy = 0;
+  private airborne = false;
+  private submerge = 0; // how far fall-momentum has pulled the player below SWIM_Y; paddling/buoyancy floats it back up
+  private proneAmount = 0; // 0 = upright tread, 1 = fully prone travel pose; eased
+
   private body: THREE.Mesh;
   private head: THREE.Mesh;
   private hat: THREE.Group;
@@ -39,6 +51,9 @@ export class Player {
 
   constructor(spawn: THREE.Vector3) {
     this.group = new THREE.Group();
+    // yaw (Y) applied before pitch (X) so the swim/walk forward-lean always
+    // composes with the current heading instead of tilting on a fixed world axis
+    this.group.rotation.order = 'YXZ';
     this.position = spawn.clone();
 
     const shirt = new THREE.MeshLambertMaterial({ color: 0xf2e9d8, flatShading: true });
@@ -116,19 +131,55 @@ export class Player {
 
     this.moving = THREE.MathUtils.lerp(this.moving, intent > 0.05 ? intent : 0, Math.min(1, 10 * dt));
 
-    // vertical: walk the terrain, or float at the surface
+    // vertical: walk the terrain with a jump arc, or swim at (or below) the surface
     const ground = heightAt(this.position.x, this.position.z);
-    this.position.y = this.swimming ? SWIM_Y : Math.max(ground, SWIM_START);
+    if (this.swimming) {
+      if (this.airborne) {
+        // hit the water mid-jump — carry a little fall momentum under the surface
+        this.submerge = Math.max(this.submerge, Math.min(1.2, -this.vy * 0.1));
+        this.airborne = false;
+        this.vy = 0;
+      }
+      const rising = input.jump ? PADDLE_UP_RATE : BUOYANCY_RATE; // paddling up beats natural buoyancy
+      this.submerge = Math.max(0, this.submerge - rising * dt);
+      this.position.y = SWIM_Y - this.submerge; // SWIM_Y is the surface cap — never exceeded
+    } else {
+      if (!this.airborne && input.jump) {
+        this.airborne = true;
+        this.vy = JUMP_SPEED;
+      }
+      if (this.airborne) {
+        this.vy -= GRAVITY * dt;
+        this.position.y += this.vy * dt;
+        if (this.position.y <= ground) {
+          this.position.y = ground;
+          this.airborne = false;
+          this.vy = 0;
+          this.submerge = 0;
+        }
+      } else {
+        this.position.y = Math.max(ground, SWIM_START);
+      }
+    }
 
     // procedural animation, all off one clock
     this.walkClock += dt * (4 + 6 * this.moving);
     let bob: number;
     let swing: number;
     if (this.swimming) {
-      bob = Math.sin(this.walkClock * 1.2) * 0.12;
-      swing = Math.sin(this.walkClock * 1.6) * 1.15; // paddle
-      this.group.rotation.x = 0.85; // lean forward in the water
+      // ease between upright treading and a fully prone travel pose
+      this.proneAmount = THREE.MathUtils.lerp(this.proneAmount, this.moving, Math.min(1, PRONE_EASE * dt));
+      bob = THREE.MathUtils.lerp(Math.sin(this.walkClock * 0.9) * 0.05, Math.sin(this.walkClock * 1.3) * 0.1, this.proneAmount);
+      swing = THREE.MathUtils.lerp(
+        Math.sin(this.walkClock * 1.0) * 0.3, // idle tread: gentle arm sway
+        Math.sin(this.walkClock * 1.6) * 1.1, // moving: alternate paddle
+        this.proneAmount
+      );
+      // whole-body pitch composes with heading (rotation.order = 'YXZ'): head stays
+      // toward travel at the surface, hips trail low and behind as the pitch grows
+      this.group.rotation.x = THREE.MathUtils.lerp(TREAD_LEAN, PRONE_ANGLE, this.proneAmount);
     } else {
+      this.proneAmount = THREE.MathUtils.lerp(this.proneAmount, 0, Math.min(1, PRONE_EASE * dt));
       bob = Math.sin(this.walkClock * 2) * 0.06 * this.moving + Math.sin(this.walkClock * 0.6) * 0.012 * (1 - this.moving);
       swing = Math.sin(this.walkClock * 2) * 0.7 * this.moving;
       this.group.rotation.x = this.moving * 0.06;

@@ -42,6 +42,8 @@ export interface GameState {
   buffs: Buffs;
   /** has the player talked to the seagull for the first time */
   gullMet: boolean;
+  /** has the first-night shooting star already played (once ever per save) */
+  starSeen: boolean;
 }
 
 const SAVE_KEY = 'kk-save-v0'; // key kept stable; `version` field handles shape
@@ -77,6 +79,7 @@ function load(): GameState {
     structures: [],
     buffs: { speed: 0, glow: 0 },
     gullMet: false,
+    starSeen: false,
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -90,6 +93,7 @@ function load(): GameState {
       structures: Array.isArray(p.structures) ? p.structures.map(sanitizeStructure).filter((s: unknown): s is PlacedStructure => s !== null) : [],
       buffs: p.buffs && typeof p.buffs === 'object' ? { speed: p.buffs.speed || 0, glow: p.buffs.glow || 0 } : { speed: 0, glow: 0 },
       gullMet: !!p.gullMet,
+      starSeen: !!p.starSeen,
     };
   } catch {
     return fallback;

@@ -9,18 +9,9 @@ import { audio } from '../audio/audio';
 
 const CHARS_PER_SEC = 28;
 
-// chunky flat portraits, palette pulled straight from entities/player.ts
-const YOU_SVG = `
-<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
-  <rect x="10" y="70" width="76" height="26" rx="10" fill="#f2e9d8"/>
-  <path d="M24 74 Q48 90 72 74 L72 96 L24 96 Z" fill="#e8623d"/>
-  <circle cx="48" cy="48" r="24" fill="#e0ac69"/>
-  <ellipse cx="48" cy="28" rx="36" ry="9" fill="#f4b860"/>
-  <rect x="28" y="8" width="40" height="22" rx="8" fill="#f4b860"/>
-  <circle cx="39" cy="50" r="3.2" fill="#262223"/>
-  <circle cx="57" cy="50" r="3.2" fill="#262223"/>
-  <path d="M39 60 Q48 65 57 60" stroke="#262223" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-</svg>`;
+// player portrait is Will's hand-fed artwork (public/images/portrait-you.webp);
+// the gull stays code-drawn — its lopsided picasso energy is canon now
+const YOU_IMG = `<img src="/images/portrait-you.webp" alt="You"/>`;
 
 const GULL_SVG = `
 <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
@@ -50,7 +41,7 @@ export class DialoguePanel {
     this.el.className = 'dialogue hidden';
     this.el.innerHTML = `
       <div class="dialogue-bar">
-        <div class="dialogue-portrait you">${YOU_SVG}</div>
+        <div class="dialogue-portrait you">${YOU_IMG}</div>
         <div class="dialogue-speech">
           <div class="dialogue-name"></div>
           <div class="dialogue-text"></div>

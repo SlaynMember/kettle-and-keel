@@ -1,6 +1,7 @@
 /**
  * Unified input: touch (left-half virtual joystick + right-half look drag),
- * keyboard (WASD/arrows + E/Space to interact), and mouse drag to look.
+ * keyboard (WASD/arrows + E to interact, Space to jump/paddle-up), mouse drag
+ * to look, and scroll wheel to zoom the camera.
  * Everything downstream reads the same abstraction — which is also the seam
  * where gamepad (Steam) and remote players (co-op) plug in later.
  */
@@ -8,9 +9,12 @@
 export class Input {
   /** normalized move intent, x = right, y = forward, length <= 1 */
   move = { x: 0, y: 0 };
+  /** Space held: jump on land, paddle up to the surface while swimming */
+  jump = false;
 
   private lookDX = 0;
   private lookDY = 0;
+  private wheelDY = 0;
   private keys = new Set<string>();
   private interactHandlers: Array<() => void> = [];
   private panelHandlers: Array<() => void> = [];
@@ -43,12 +47,14 @@ export class Input {
     window.addEventListener('pointermove', this.onMove);
     window.addEventListener('pointerup', this.onUp);
     window.addEventListener('pointercancel', this.onUp);
+    canvas.addEventListener('wheel', this.onWheel, { passive: false });
 
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') e.preventDefault(); // never let the page scroll, even on OS key-repeat
       if (e.repeat) return;
       if (e.code === 'Tab') e.preventDefault(); // don't move browser focus
       this.keys.add(e.code);
-      if (e.code === 'KeyE' || e.code === 'Space') this.fireInteract();
+      if (e.code === 'KeyE') this.fireInteract();
       if (e.code === 'Tab' || e.code === 'KeyI') this.panelHandlers.forEach((fn) => fn());
       if (e.code === 'Escape') this.escapeHandlers.forEach((fn) => fn());
     });
@@ -82,6 +88,13 @@ export class Input {
     return out;
   }
 
+  /** per-frame scroll-wheel deltaY sum (camera zoom); consuming resets it */
+  consumeZoom(): number {
+    const out = this.wheelDY;
+    this.wheelDY = 0;
+    return out;
+  }
+
   update() {
     // keyboard movement merges with (and yields to) touch joystick
     if (this.movePointer === null) {
@@ -95,6 +108,7 @@ export class Input {
       this.move.x = len > 0 ? x / len : 0;
       this.move.y = len > 0 ? y / len : 0;
     }
+    this.jump = this.keys.has('Space');
   }
 
   private onDown = (e: PointerEvent) => {
@@ -162,6 +176,11 @@ export class Input {
     } else if (e.pointerId === this.lookPointer) {
       this.lookPointer = null;
     }
+  };
+
+  private onWheel = (e: WheelEvent) => {
+    e.preventDefault(); // never let the page scroll under the canvas
+    this.wheelDY += e.deltaY;
   };
 
   private showJoystick(x: number, y: number) {

@@ -14,6 +14,7 @@ import { HerbField } from './entities/herbs';
 import { ResourceField } from './entities/resources';
 import { Structures } from './entities/structures';
 import { Gull } from './entities/gull';
+import { ShootingStar } from './world/star';
 import { Hud } from './ui/hud';
 import { SatchelPanel } from './ui/panel';
 import { DialoguePanel } from './ui/dialogue';
@@ -74,6 +75,9 @@ scene.add(structures.group);
 const gull = new Gull();
 scene.add(gull.group);
 
+const star = new ShootingStar();
+scene.add(star.group);
+
 const rig = new CameraRig(camera);
 rig.occluders = resources.occluders;
 const input = new Input(canvas, uiRoot);
@@ -124,6 +128,11 @@ gull.onChat = async () => {
   }
 };
 
+function stopWatchingStar() {
+  star.stopWatching();
+  rig.lookTarget = null;
+}
+
 function triggerAction() {
   if (dialogue.isOpen) {
     dialogue.advance();
@@ -134,6 +143,14 @@ function triggerAction() {
     return;
   }
   if (panel.isOpen || player.busy) return;
+  if (star.watching) {
+    stopWatchingStar();
+    return;
+  }
+  if (star.active) {
+    star.watching = true;
+    return;
+  }
   interactions.trigger();
 }
 input.onInteract(() => triggerAction());
@@ -149,6 +166,7 @@ input.onEscape(() => {
 // ---- loop ----
 let started = false;
 let nightMusic = false; // hysteresis so the soundtrack doesn't flap at dusk
+let starWasActive = false; // edge-detects the shooting star ending, for the "Make a wish." toast
 const clock = new THREE.Clock();
 const idleInput = { move: { x: 0, y: 0 } } as Input;
 
@@ -172,14 +190,12 @@ function tick() {
     store.set({ buffs: { ...buffs } });
   }
 
-  // contextual soundtrack: workshop while crafting/placing, Hazy Tea Drift at night
+  // soundtrack: the day playlist, or Hazy Tea Drift at night — nothing else touches it
   if (nightMusic ? sky.daylight > 0.32 : sky.daylight < 0.2) nightMusic = !nightMusic;
-  const musicCtx: MusicContext =
-    panel.isOpen || structures.placing ? 'workshop' : nightMusic ? 'risk' : 'explore';
+  const musicCtx: MusicContext = nightMusic ? 'night' : 'day';
   audio.setContext(musicCtx, dt);
   audio.update(dt);
 
-  rig.update(dt, input, player.position);
   sky.update(dt, player.position);
   water.update(dt);
   props.update(dt, sky.daylight);
@@ -188,13 +204,33 @@ function tick() {
   resources.update(dt);
   structures.update(dt, player.position, player.heading);
   gull.update(dt, player.position);
+  star.update(dt, player.position);
   interactions.update(player.position);
 
-  // context button: placement mode wins, then nearest interactable
+  // first-night shooting star: once ever per save, fires the moment night first falls
+  if (started && sky.daylight < 0.15 && !store.get().starSeen && !dialogue.isOpen) {
+    star.begin(player.position);
+    store.set({ starSeen: true });
+  }
+  if (starWasActive && !star.active) toast('Make a wish.');
+  starWasActive = star.active;
+  if (star.watching) {
+    const moveMag = Math.hypot(input.move.x, input.move.y);
+    if (moveMag > 0.2 || !star.active) stopWatchingStar();
+    else rig.lookTarget = star.getPosition();
+  }
+
+  rig.update(dt, input, player.position);
+
+  // context button: placement wins, then the star-watch prompt, then the nearest interactable
   if (!started || panel.isOpen || dialogue.isOpen) {
     hud.setAction(null);
   } else if (structures.placing) {
     hud.setAction(structures.placementLabel(), { danger: !structures.placementLabel().startsWith('Place'), cancelable: true });
+  } else if (star.watching) {
+    hud.setAction('Look away');
+  } else if (star.active) {
+    hud.setAction('✨ Watch star');
   } else {
     hud.setAction(interactions.active?.label() ?? null);
   }
@@ -222,4 +258,4 @@ hud.showIntro().then(() => {
 tick();
 
 // dev/debug handle (also how automated playtests drive the game)
-Object.assign(window, { __kk: { player, rig, sky, camera, heightAt, store, structures, gull, buffs, audio, panel, dialogue } });
+Object.assign(window, { __kk: { player, rig, sky, camera, heightAt, store, structures, gull, star, buffs, audio, panel, dialogue } });
