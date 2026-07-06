@@ -12,6 +12,7 @@ import { interactions } from '../core/interact';
 import { store } from '../core/store';
 import { audio } from '../audio/audio';
 import { ITEM_BY_ID, type ItemId } from '../data/items';
+import { SHARK_TOASTS } from '../data/dialogue';
 import type { Player } from './player';
 
 const rng = makeRng(66604);
@@ -94,6 +95,14 @@ export class Sharks {
   private clock = 0;
   /** main.ts flips this while the player is aboard the boat */
   playerAboard = false;
+
+  // fin-off-the-bow copy: a proper word from the Admiral the first time,
+  // rotating one-line toasts after that
+  private sightingIntroDone = false;
+  private sightToastIndex = 0;
+  private sightCooldown = 0;
+  /** main.ts wires this to the dialogue panel (first sighting only) */
+  onFirstSighting: (() => void) | null = null;
 
   constructor(private player: Player, private toast: (msg: string) => void) {
     for (const patrol of PATROLS) {
@@ -221,6 +230,25 @@ export class Sharks {
     // drops bob on the surface
     for (const d of this.drops) {
       d.group.position.y = water + Math.sin(this.clock * 1.6 + d.bobPhase) * 0.12;
+    }
+
+    // fin sighted from the deck: Biscuit has opinions (never while swimming —
+    // out there you have your own problems)
+    this.sightCooldown = Math.max(0, this.sightCooldown - dt);
+    if (this.playerAboard && this.sightCooldown <= 0) {
+      const p = this.player.position;
+      const near = this.sharks.some((s) => Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 24);
+      if (near) {
+        if (!this.sightingIntroDone) {
+          this.sightingIntroDone = true;
+          this.sightCooldown = 30;
+          this.onFirstSighting?.();
+        } else {
+          this.sightCooldown = 30;
+          this.toast(`Biscuit: ${SHARK_TOASTS[this.sightToastIndex % SHARK_TOASTS.length]}`);
+          this.sightToastIndex++;
+        }
+      }
     }
   }
 }

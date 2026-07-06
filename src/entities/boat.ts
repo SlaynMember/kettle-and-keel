@@ -8,11 +8,12 @@
  * and running aground just stops the keel — cozy, never punishing.
  */
 import * as THREE from 'three';
-import { heightAt, insideWorld } from '../world/terrain';
+import { heightAt, insideWorld, ISLAND2_CENTER } from '../world/terrain';
 import { getWaterLevel } from '../world/tide';
 import { interactions } from '../core/interact';
 import { store } from '../core/store';
 import { audio } from '../audio/audio';
+import { WRECK_HULL_LINES, WRECK_RIG_LINES, CROSSING_TOASTS, type DialogueLine } from '../data/dialogue';
 import type { Water } from '../world/water';
 import type { Wreck } from '../world/props';
 import type { Player } from './player';
@@ -28,12 +29,9 @@ const TURN_RATE = 1.25;
 const DRAFT = 0.7; // min water under the keel; shallower = aground
 const BOB_DRAFT = 0.2; // how deep the hull sits below the bobbing surface
 
-const WRECK_LINES = [
-  "The hull's split like old bread. She won't sail today.",
-  'Good keel under the barnacles. Worth saving.',
-  "You'll need wood. A lot of it. And a reason.",
-  'The gull left a feather on the bow. Sentimental, or littering.',
-];
+// open-water chatter: only past both islands' shallows, one line at a time
+const CHATTER_FIRST_DELAY = 5;
+const CHATTER_INTERVAL = 18;
 
 const WOOD = new THREE.MeshLambertMaterial({ color: 0x8a5a3b, flatShading: true });
 const WOOD_DARK = new THREE.MeshLambertMaterial({ color: 0x54341e, flatShading: true });
@@ -118,12 +116,19 @@ export class Boat {
   private hull: THREE.Group | null = null; // stage 1: on the sand
   private vessel: THREE.Group | null = null; // stage 2: afloat
   private sail: THREE.Mesh | null = null;
-  private wreckLineIndex = 0;
+  private hullLineIndex = 0;
+  private rigLineIndex = 0;
+  private chatterIndex = 0;
+  private chatterTimer = 0;
   private persistTimer = 0;
   private agroundToastCooldown = 0;
 
   /** main.ts: player boarded/left — gate the world's input routing on this */
   onBoardChange: ((aboard: boolean) => void) | null = null;
+  /** main.ts wires this to the dialogue panel; Biscuit narrates the rebuild */
+  onBiscuit: ((lines: DialogueLine[]) => void) | null = null;
+  /** fired once, the moment she launches — the ceremony hook */
+  onLaunched: (() => void) | null = null;
 
   constructor(
     private wreck: Wreck | null,
@@ -169,8 +174,9 @@ export class Boat {
         audio.sfx('sfx-levelup');
         this.toast('The keel remembers. Hull rebuilt.');
       } else {
-        this.toast(WRECK_LINES[this.wreckLineIndex % WRECK_LINES.length]);
-        this.wreckLineIndex++;
+        // the Admiral supervises the patching, one remark per visit
+        this.onBiscuit?.([WRECK_HULL_LINES[this.hullLineIndex % WRECK_HULL_LINES.length]]);
+        this.hullLineIndex++;
         audio.sfx('sfx-ui-click');
       }
       return;
@@ -182,8 +188,11 @@ export class Boat {
         this.launch(mooring.x, mooring.z, mooring.heading, false);
         audio.sfx('sfx-levelup');
         this.toast('She floats! The sail smells like the shallows.');
+        this.onLaunched?.();
       } else {
-        this.toast('Not yet — she needs 6 wood and 8 algae for the rig.');
+        // deck pride first, mast talk after — the cost stays on the button label
+        this.onBiscuit?.([WRECK_RIG_LINES[this.rigLineIndex % WRECK_RIG_LINES.length]]);
+        this.rigLineIndex++;
         audio.sfx('sfx-ui-click');
       }
     }
@@ -316,6 +325,19 @@ export class Boat {
       if (this.persistTimer > 5) {
         this.persistTimer = 0;
         this.persist();
+      }
+
+      // Biscuit narrates the open water (worried, hiding it poorly)
+      const d1 = Math.hypot(this.position.x, this.position.z);
+      const d2 = Math.hypot(this.position.x - ISLAND2_CENTER.x, this.position.z - ISLAND2_CENTER.y);
+      if (d1 > 95 && d2 > 85) {
+        this.chatterTimer += dt;
+        const due = this.chatterIndex === 0 ? CHATTER_FIRST_DELAY : CHATTER_INTERVAL;
+        if (this.chatterTimer >= due) {
+          this.chatterTimer = 0;
+          this.toast(`Biscuit: ${CROSSING_TOASTS[this.chatterIndex % CROSSING_TOASTS.length]}`);
+          this.chatterIndex++;
+        }
       }
 
       // the player rides the deck; position tracks the boat for camera + interactions

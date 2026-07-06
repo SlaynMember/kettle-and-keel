@@ -20,6 +20,8 @@ const GULL_MOOD_SRC: Record<NonNullable<DialogueLine['mood']>, string> = {
   annoyed: '/images/portraits/biscuit-annoyed.webp',
   smug: '/images/portraits/biscuit-smug.webp',
   pleased: '/images/portraits/biscuit-pleased.webp',
+  worried: '/images/portraits/biscuit-worried.webp',
+  proud: '/images/portraits/biscuit-proud.webp',
 };
 
 export class DialoguePanel {

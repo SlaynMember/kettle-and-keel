@@ -7,7 +7,7 @@ export interface DialogueLine {
   speaker: 'you' | 'gull';
   text: string;
   /** portrait swap; meaningful only on gull lines */
-  mood?: 'annoyed' | 'smug' | 'pleased';
+  mood?: 'annoyed' | 'smug' | 'pleased' | 'worried' | 'proud';
 }
 
 /** first meeting: player pours seamint tea into the bird bath and the gull lands */
@@ -60,6 +60,102 @@ export const GULL_CHATTER: DialogueLine[][] = [
   [{ speaker: 'gull', text: 'Tea first, heroics second. This is not cowardice. This is scheduling.' }],
   [{ speaker: 'gull', text: 'I am beginning to suspect you are trainable. Do not become unbearable about it.', mood: 'pleased' }],
   [{ speaker: 'gull', text: 'The horizon is not going to cross itself. Finish the chores, then we scheme.', mood: 'annoyed' }],
+];
+
+// ---- boat arc copy (Codex writing pack 3, 2026-07-05) ----
+
+/** stage-0 wreck inspection when the hull can't be afforded yet; one line per visit */
+export const WRECK_HULL_LINES: DialogueLine[] = [
+  { speaker: 'gull', text: 'The bottom is less hole than memory now. Promising.', mood: 'pleased' },
+  { speaker: 'gull', text: 'Patch there. Yes, there. The ocean has been pointing at it all morning.', mood: 'annoyed' },
+  { speaker: 'gull', text: 'I approve of any plan that keeps the sea outside the boat.', mood: 'smug' },
+  { speaker: 'gull', text: 'That patch is crooked. Fortunately, so is every honest vessel.', mood: 'smug' },
+  { speaker: 'gull', text: 'If it floats for ten breaths, I will call it engineering.' },
+  { speaker: 'gull', text: 'The hull has stopped looking embarrassed. Continue.', mood: 'pleased' },
+];
+
+/** stage-1 (hull rebuilt, rig unaffordable): deck pride first, then mast talk */
+export const WRECK_RIG_LINES: DialogueLine[] = [
+  { speaker: 'gull', text: 'A deck. At last, a proper place for an admiral to criticize from.', mood: 'smug' },
+  { speaker: 'gull', text: 'Step carefully. It is new, and therefore dramatic.' },
+  { speaker: 'gull', text: 'The boards complain less than you do. I respect them.', mood: 'smug' },
+  { speaker: 'gull', text: 'This is starting to resemble a boat instead of a seaside apology.', mood: 'pleased' },
+  { speaker: 'gull', text: 'Leave room for command. By which I mean me.', mood: 'smug' },
+  { speaker: 'gull', text: 'Good footing matters. Panic is easier with traction.' },
+  { speaker: 'gull', text: 'Up it goes. Try not to spear the sky.' },
+  { speaker: 'gull', text: 'A mast changes things. The horizon notices.', mood: 'pleased' },
+  { speaker: 'gull', text: 'Tie it steady. The wind loves loose arguments.' },
+  { speaker: 'gull', text: 'That is tall enough to make bad ideas visible.', mood: 'smug' },
+  { speaker: 'gull', text: 'I can almost hear the sail bragging.', mood: 'pleased' },
+  { speaker: 'gull', text: 'There. A spine for the little boat.', mood: 'pleased' },
+];
+
+/** plays once, the moment she launches */
+export const LAUNCH_CEREMONY: DialogueLine[] = [
+  { speaker: 'you', text: 'She floats.' },
+  { speaker: 'gull', text: 'Naturally. I supervised from a distance of importance.', mood: 'smug' },
+  { speaker: 'you', text: 'Permission to launch, Admiral?' },
+  { speaker: 'gull', text: 'Granted. The fleet accepts its second member.', mood: 'proud' },
+  { speaker: 'you', text: 'Second?' },
+  { speaker: 'gull', text: 'I have been a fleet for years. You are catching up.', mood: 'smug' },
+  { speaker: 'you', text: 'Any ceremony?' },
+  { speaker: 'gull', text: 'Yes. We glare at the sea until it behaves.' },
+  { speaker: 'you', text: 'To the next island, then.' },
+  { speaker: 'gull', text: 'To the next kettle, preferably.', mood: 'pleased' },
+  { speaker: 'gull', text: 'Also, sailor?' },
+  { speaker: 'you', text: 'Yeah?' },
+  { speaker: 'gull', text: 'Good work. Do not make it weird.', mood: 'proud' },
+];
+
+/** open-water chatter while sailing, rotated as toasts (worried, hiding it poorly) */
+export const CROSSING_TOASTS: string[] = [
+  'Wind is fine. Waves are fine. My feathers are making their own choices.',
+  'Do not splash like a snack.',
+  'That fin is only passing through. We are also passing through. Everyone is busy.',
+  'If the boat creaks, ignore it. If I creak, listen.',
+  'The sea is bigger out here. Rude of it.',
+  'Keep her nose steady. Boats like confidence, even fake confidence.',
+  'I am not worried. I am conducting an advanced horizon inspection.',
+  'That wave was showing off. Very immature.',
+  'See the gap in the mist? Aim there before it changes its mind.',
+  'If anything bumps the hull, we remain dignified. Loudly, if needed.',
+  'Do not look down too long. The water enjoys an audience.',
+  'Almost there. I knew that. Obviously.',
+];
+
+/** first fin near the boat: a proper (worried) word from the Admiral */
+export const SHARK_SIGHTING: DialogueLine[] = [
+  { speaker: 'gull', text: 'Fin off port. Calmly. Do not splash like a snack.', mood: 'worried' },
+  { speaker: 'gull', text: 'That one is curious, not rude. Maintain snacklessness.', mood: 'worried' },
+  { speaker: 'gull', text: 'No panic. Panic has terrible buoyancy.', mood: 'smug' },
+];
+
+/** later sightings rotate as toasts — cozy fin energy, not horror */
+export const SHARK_TOASTS: string[] = [
+  'Wave to it with your eyes. Keep your hands in the boat.',
+  'Big fish, small manners. We proceed.',
+  'It has places to be. So do we. Wonderful arrangement.',
+  'The fin is just checking our paperwork.',
+  'It circles because circles are easy. We sail because we are ambitious.',
+];
+
+/** plays once, first footfall on island 2 */
+export const FIRST_LANDING: DialogueLine[] = [
+  { speaker: 'you', text: 'Different trees.' },
+  { speaker: 'gull', text: 'Taller. Mistier. Clearly trying to impress me.', mood: 'smug' },
+  { speaker: 'you', text: 'It worked?' },
+  { speaker: 'gull', text: 'I said trying.', mood: 'annoyed' },
+  { speaker: 'you', text: 'The air smells colder here.' },
+  { speaker: 'gull', text: 'Good. Maybe it will cool your decision-making.', mood: 'smug' },
+  { speaker: 'you', text: 'We made it.' },
+  { speaker: 'gull', text: 'The fleet made it.', mood: 'proud' },
+  { speaker: 'you', text: 'Fleet of two?' },
+  { speaker: 'gull', text: 'Fleet of one admiral, one sailor, and one boat with potential.', mood: 'proud' },
+  { speaker: 'you', text: 'What now?' },
+  { speaker: 'gull', text: 'We listen first. New islands hate being rushed.' },
+  { speaker: 'gull', text: 'Then we find something warm to brew.', mood: 'pleased' },
+  { speaker: 'you', text: 'Priorities.' },
+  { speaker: 'gull', text: 'Survival is mostly priorities with better hats.', mood: 'smug' },
 ];
 
 /** notes found in washed-ashore bottles (world/beachfinds.ts); selection is deterministic per day */

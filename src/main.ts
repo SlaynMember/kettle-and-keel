@@ -25,7 +25,7 @@ import { SatchelPanel } from './ui/panel';
 import { DialoguePanel } from './ui/dialogue';
 import { GuideCard } from './ui/guide';
 import { Cards } from './ui/cards';
-import { MEET_GULL, GULL_CHATTER } from './data/dialogue';
+import { MEET_GULL, GULL_CHATTER, LAUNCH_CEREMONY, FIRST_LANDING, SHARK_SIGHTING } from './data/dialogue';
 import { GOALS, PRAISE_LINES } from './data/guidance';
 import { ITEM_BY_ID, type ItemId } from './data/items';
 import { FLAVOR } from './data/flavor';
@@ -151,6 +151,17 @@ boat.onBoardChange = (aboard) => {
   sharks.playerAboard = aboard;
 };
 props2.onUseKettle = () => panel.open(true);
+
+// writing pack 3: Biscuit narrates the whole boat arc through the dialogue panel
+boat.onBiscuit = (lines) => {
+  if (!dialogue.isOpen) void dialogue.play(lines);
+};
+boat.onLaunched = () => {
+  if (!dialogue.isOpen) void dialogue.play(LAUNCH_CEREMONY);
+};
+sharks.onFirstSighting = () => {
+  if (!dialogue.isOpen) void dialogue.play(SHARK_SIGHTING);
+};
 
 // placements must not smother the kettle prompt
 structures.avoid.push(props.campfire.position);
@@ -442,8 +453,8 @@ function tick() {
     Math.hypot(player.position.x - ISLAND2_CENTER.x, player.position.z - ISLAND2_CENTER.y) < ISLAND2_RADIUS
   ) {
     store.set({ visitedIsland2: true });
-    toast('A new shore under your boots.');
     audio.sfx('sfx-levelup');
+    if (!dialogue.isOpen) void dialogue.play(FIRST_LANDING);
   }
 
   // breath + underwater dressing
