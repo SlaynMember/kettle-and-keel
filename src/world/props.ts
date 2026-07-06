@@ -4,16 +4,19 @@
  * Trees and rocks live in entities/resources.ts now — they're harvestable.
  */
 import * as THREE from 'three';
-import { heightAt, slopeAt, makeRng, ISLAND_RADIUS } from './terrain';
+import { heightAt, slopeAt, makeRng, ISLAND_RADIUS, ISLAND2_CENTER, ISLAND2_RADIUS } from './terrain';
+import { interactions } from '../core/interact';
+import { store } from '../core/store';
+import { audio } from '../audio/audio';
 
 const rng = makeRng(9042);
 
-function scatterPoint(minH: number, maxH: number, maxSlope: number): THREE.Vector3 | null {
+function scatterPoint(cx: number, cz: number, radius: number, minH: number, maxH: number, maxSlope: number): THREE.Vector3 | null {
   for (let tries = 0; tries < 40; tries++) {
     const a = rng() * Math.PI * 2;
-    const r = Math.sqrt(rng()) * ISLAND_RADIUS * 0.92;
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
+    const r = Math.sqrt(rng()) * radius * 0.92;
+    const x = cx + Math.cos(a) * r;
+    const z = cz + Math.sin(a) * r;
     const h = heightAt(x, z);
     if (h >= minH && h <= maxH && slopeAt(x, z) <= maxSlope) {
       return new THREE.Vector3(x, h, z);
@@ -182,7 +185,7 @@ export class Props {
 
   constructor(spawn: THREE.Vector3) {
     for (let i = 0; i < 55; i++) {
-      const p = scatterPoint(1.5, 8, 0.5);
+      const p = scatterPoint(0, 0, ISLAND_RADIUS, 1.5, 8, 0.5);
       if (!p) continue;
       const gr = grassTuft();
       gr.position.copy(p);
@@ -205,6 +208,82 @@ export class Props {
   }
 
   update(dt: number, daylight: number) {
+    this.clock += dt;
+    const flicker = 0.85 + Math.sin(this.clock * 11) * 0.1 + Math.sin(this.clock * 23.7) * 0.05;
+    this.campfire.flame.scale.set(flicker, flicker * (1 + Math.sin(this.clock * 7) * 0.12), flicker);
+    this.campfire.light.intensity = (0.35 + (1 - daylight) * 2.2) * flicker;
+  }
+}
+
+/**
+ * Island 2's dressing (v3): grass tufts and a cold campfire on the shore
+ * facing home — someone camped here once. Two sticks of wood wake it up,
+ * and its kettle works exactly like the one you left behind.
+ */
+export class IslandTwoProps {
+  readonly group = new THREE.Group();
+  readonly campfire: Campfire;
+  private clock = 0;
+
+  /** main.ts wires this to the brew panel */
+  onUseKettle: (() => void) | null = null;
+
+  constructor(toast: (msg: string) => void) {
+    for (let i = 0; i < 40; i++) {
+      const p = scatterPoint(ISLAND2_CENTER.x, ISLAND2_CENTER.y, ISLAND2_RADIUS, 1.5, 9, 0.5);
+      if (!p) continue;
+      const gr = grassTuft();
+      gr.position.copy(p);
+      gr.position.y += 0.2;
+      this.group.add(gr);
+    }
+
+    // the cold campfire: walk from the island's center toward home until sand
+    const dir = new THREE.Vector2(-ISLAND2_CENTER.x, -ISLAND2_CENTER.y).normalize();
+    let spot = new THREE.Vector3(ISLAND2_CENTER.x, 0, ISLAND2_CENTER.y);
+    for (let r = 0; r < ISLAND2_RADIUS + 12; r += 0.5) {
+      const x = ISLAND2_CENTER.x + dir.x * r;
+      const z = ISLAND2_CENTER.y + dir.y * r;
+      const h = heightAt(x, z);
+      if (h < 1.6 && h > 0.9) {
+        spot = new THREE.Vector3(x, h, z);
+        break;
+      }
+    }
+    this.campfire = buildCampfire(spot);
+    this.group.add(this.campfire.group);
+    this.syncLit();
+
+    interactions.add({
+      label: () => {
+        if (store.get().camp2Lit) return 'Use Kettle';
+        return store.count('wood') >= 2 ? 'Light the fire (2 wood)' : 'A cold campfire (needs 2 wood)';
+      },
+      position: this.campfire.position,
+      range: 3.2,
+      priority: 3,
+      action: () => {
+        if (store.get().camp2Lit) {
+          this.onUseKettle?.();
+          return;
+        }
+        if (!store.spend({ wood: 2 })) return;
+        store.set({ camp2Lit: true });
+        this.syncLit();
+        audio.sfx('sfx-levelup');
+        toast('The far shore has a hearth again.');
+      },
+    });
+  }
+
+  private syncLit() {
+    const lit = store.get().camp2Lit;
+    this.campfire.flame.visible = lit;
+    if (!lit) this.campfire.light.intensity = 0;
+  }
+
+  update(dt: number, daylight: number) {
+    if (!store.get().camp2Lit) return;
     this.clock += dt;
     const flicker = 0.85 + Math.sin(this.clock * 11) * 0.1 + Math.sin(this.clock * 23.7) * 0.05;
     this.campfire.flame.scale.set(flicker, flicker * (1 + Math.sin(this.clock * 7) * 0.12), flicker);

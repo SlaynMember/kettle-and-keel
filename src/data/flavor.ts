@@ -24,4 +24,8 @@ export const FLAVOR: Partial<Record<ItemId, string>> = {
   loam: 'Soil with a resume. Gardens ask for it by name.',
   garden_bed_kit: 'A promise to stay a while, framed in wood.',
   lean_to_kit: 'Half a house. The optimistic half.',
+  kelp: 'The deep forest waves back, apparently.',
+  dried_kelp: 'Smells like low tide and good decisions.',
+  kelp_tea: 'Tastes like the horizon. Your lungs approve.',
+  pearl: 'The sea kept this secret for years. Now it has trust issues.',
 };

@@ -16,7 +16,7 @@ export class SatchelPanel {
   private kettleMode = false;
 
   onPlace: ((kind: NonNullable<ItemDef['placeable']>) => void) | null = null;
-  onDrink: ((buff: 'speed' | 'glow', seconds: number) => void) | null = null;
+  onDrink: ((buff: 'speed' | 'glow' | 'breath', seconds: number) => void) | null = null;
   private onToast: (msg: string) => void;
 
   constructor(root: HTMLElement, toast: (msg: string) => void) {
@@ -175,9 +175,16 @@ export class SatchelPanel {
         label: 'Drink',
         fn: () => {
           if (store.spend({ [item.id]: 1 })) {
-            this.onDrink?.(item.drinkable!.buff, item.drinkable!.seconds);
+            const buff = item.drinkable!.buff;
+            this.onDrink?.(buff, item.drinkable!.seconds);
             audio.sfx('sfx-levelup');
-            this.onToast(item.drinkable!.buff === 'speed' ? 'Light steps! (speed up)' : 'A warm glow surrounds you');
+            this.onToast(
+              buff === 'speed'
+                ? 'Light steps! (speed up)'
+                : buff === 'glow'
+                  ? 'A warm glow surrounds you'
+                  : 'Your lungs feel like sails (deeper dives)'
+            );
           }
         },
       };

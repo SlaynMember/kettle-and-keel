@@ -14,12 +14,24 @@ export class Hud {
   private actionBtn: HTMLButtonElement;
   private cancelBtn: HTMLButtonElement;
   private satchelBtn: HTMLButtonElement;
+  private diveBtn: HTMLButtonElement;
   private timeChip: HTMLElement;
   private buffBox: HTMLElement;
   private toastBox: HTMLElement;
   private sleepFade: HTMLElement;
+  private underwaterTint: HTMLElement;
+  private breathMeter: HTMLElement;
+  private breathFill: HTMLElement;
 
-  constructor(root: HTMLElement, handlers: { onAction: () => void; onSatchel: () => void; onCancel: () => void }) {
+  constructor(
+    root: HTMLElement,
+    handlers: {
+      onAction: () => void;
+      onSatchel: () => void;
+      onCancel: () => void;
+      onDiveHold: (held: boolean) => void;
+    }
+  ) {
     // top-left: compact inventory chips
     this.inv = document.createElement('div');
     this.inv.className = 'hud-inventory';
@@ -69,8 +81,33 @@ export class Hud {
       e.preventDefault();
       handlers.onCancel();
     });
-    stack.append(this.cancelBtn, this.actionBtn, this.satchelBtn);
+    // hold-to-dive button: only visible while swimming (main.ts toggles it)
+    this.diveBtn = document.createElement('button');
+    this.diveBtn.className = 'dive-btn hidden';
+    this.diveBtn.innerHTML = '🤿';
+    const diveStart = (e: PointerEvent) => {
+      e.preventDefault();
+      handlers.onDiveHold(true);
+    };
+    const diveEnd = () => handlers.onDiveHold(false);
+    this.diveBtn.addEventListener('pointerdown', diveStart);
+    this.diveBtn.addEventListener('pointerup', diveEnd);
+    this.diveBtn.addEventListener('pointercancel', diveEnd);
+    this.diveBtn.addEventListener('pointerleave', diveEnd);
+    stack.append(this.cancelBtn, this.actionBtn, this.diveBtn, this.satchelBtn);
     root.appendChild(stack);
+
+    // breath bubbles: bottom-center pill, only while diving matters
+    this.breathMeter = document.createElement('div');
+    this.breathMeter.className = 'breath-meter hidden';
+    this.breathMeter.innerHTML = '<span class="breath-emoji">🫧</span><div class="breath-track"><div class="breath-fill"></div></div>';
+    this.breathFill = this.breathMeter.querySelector('.breath-fill')!;
+    root.appendChild(this.breathMeter);
+
+    // underwater wash: pure tint, never interactive
+    this.underwaterTint = document.createElement('div');
+    this.underwaterTint.className = 'underwater-tint';
+    root.appendChild(this.underwaterTint);
 
     // toasts
     this.toastBox = document.createElement('div');
@@ -122,14 +159,15 @@ export class Hud {
     this.cancelBtn.classList.toggle('hidden', !opts.cancelable);
   }
 
-  setTime(time: number, day: number) {
+  setTime(time: number, day: number, tideRising?: boolean) {
     const hours = Math.floor(time * 24);
     const mins = Math.floor((time * 24 - hours) * 60);
     const icon = time > 0.26 && time < 0.76 ? '☀️' : '🌙';
-    this.timeChip.textContent = `${icon} Day ${day} · ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    const tide = tideRising === undefined ? '' : ` · 🌊${tideRising ? '▲' : '▼'}`;
+    this.timeChip.textContent = `${icon} Day ${day} · ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}${tide}`;
   }
 
-  setBuffs(buffs: { speed: number; glow: number }) {
+  setBuffs(buffs: { speed: number; glow: number; breath: number }) {
     this.buffBox.innerHTML = '';
     const entries: Array<[string, number]> = [
       ['/images/icons/buffs/speed.webp', buffs.speed],
@@ -142,6 +180,34 @@ export class Hud {
       chip.innerHTML = `<img class="buff-icon" src="${icon}" alt=""/> ${Math.ceil(secs)}s`;
       this.buffBox.appendChild(chip);
     }
+    // kelp lungs: emoji chip until the next icon batch lands
+    if (buffs.breath > 0) {
+      const chip = document.createElement('div');
+      chip.className = 'chip buff-chip';
+      chip.innerHTML = `<span class="buff-emoji">🫧</span> ${Math.ceil(buffs.breath)}s`;
+      this.buffBox.appendChild(chip);
+    }
+  }
+
+  /** show/hide the hold-to-dive button (main.ts: while swimming, not sailing) */
+  setDiveVisible(visible: boolean) {
+    this.diveBtn.classList.toggle('hidden', !visible);
+  }
+
+  /** breath as 0..1, or null to hide the meter entirely */
+  setBreath(fraction: number | null) {
+    if (fraction === null) {
+      this.breathMeter.classList.add('hidden');
+      return;
+    }
+    this.breathMeter.classList.remove('hidden');
+    this.breathFill.style.width = `${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%`;
+    this.breathFill.classList.toggle('low', fraction < 0.28);
+  }
+
+  /** 0 = above water; 1 = fully submerged wash */
+  setUnderwater(amount: number) {
+    this.underwaterTint.style.opacity = String(Math.max(0, Math.min(1, amount)));
   }
 
   /** 0 hides the fade entirely; otherwise sets its opacity directly (main.ts drives the curve) */

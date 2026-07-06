@@ -3,13 +3,12 @@
  * original Kettle & Keel soundtrack, switched only by day/night — nothing
  * else (satchel, crafting, placement) touches the soundtrack:
  *
- *   day   — a playlist: Tiny Tea Boat, then Harbor Toy Workshop, round-robin.
- *           Each track plays to its natural end (no loop) before crossfading
- *           into the next.
- *   night — Hazy Tea Drift, looped.
- *
- * (Building + Beat the Drum live in /music-reserve, banked for island 2 and
- * boat crossings.)
+ *   day     — island 1 playlist: Tiny Tea Boat, then Harbor Toy Workshop,
+ *             round-robin. Each track plays to its natural end (no loop)
+ *             before crossfading into the next.
+ *   day2    — island 2 playlist: Building leads, Harbor Toy Workshop follows.
+ *   night   — Hazy Tea Drift, looped (both islands).
+ *   sailing — Beat the Drum, looped, whenever the player holds the tiller.
  * The day<->night switch crossfades over ~4s, needs the new context to hold
  * for a few seconds, and never fires within MIN_PLAY_SECONDS of the last
  * switch — so dusk flicker doesn't whiplash the music. Each track remembers
@@ -18,12 +17,17 @@
  */
 import { store } from '../core/store';
 
-export type MusicContext = 'day' | 'night';
+export type MusicContext = 'day' | 'day2' | 'night' | 'sailing';
 
 const TRACKS: Record<MusicContext, string[]> = {
   day: ['tiny-tea-boat', 'harbor-toy-workshop'],
+  day2: ['building', 'harbor-toy-workshop'],
   night: ['hazy-tea-drift'],
+  sailing: ['beat-the-drum-extended'],
 };
+
+/** contexts whose single track loops instead of rolling a playlist */
+const LOOPING: MusicContext[] = ['night', 'sailing'];
 
 const MUSIC_KEY = 'kk-music-v2';
 const BGM_VOLUME = 0.4;
@@ -45,7 +49,8 @@ class AudioManager {
   private fading: HTMLAudioElement | null = null;
   private context: MusicContext = 'day';
   private currentTrack = '';
-  private dayIndex = 0; // which day-playlist entry is up; persists across day<->night switches
+  /** which playlist entry is up per context; persists across context switches */
+  private playlistIndex: Partial<Record<MusicContext, number>> = {};
   private pending: MusicContext | null = null;
   private pendingFor = 0;
   private positions: Record<string, number> = {};
@@ -83,7 +88,13 @@ class AudioManager {
       return;
     }
     this.pendingFor += dt;
-    if (this.pendingFor >= CONTEXT_DEBOUNCE && this.sincePlay >= MIN_PLAY_SECONDS) {
+    // boarding/leaving the boat is an explicit player act — switch fast;
+    // day/night boundaries keep the slow debounce so dusk can't flap the music
+    const sailingEdge = ctx === 'sailing' || this.context === 'sailing';
+    const ready = sailingEdge
+      ? this.pendingFor >= 0.4
+      : this.pendingFor >= CONTEXT_DEBOUNCE && this.sincePlay >= MIN_PLAY_SECONDS;
+    if (ready) {
       this.context = ctx;
       this.pending = null;
       this.crossfadeTo(this.pickTrack(ctx));
@@ -105,23 +116,24 @@ class AudioManager {
     }
   }
 
-  /** resume the day playlist where it left off, or the single night track */
+  /** resume the context's playlist where it left off, or its single looping track */
   private pickTrack(ctx: MusicContext): string {
-    return ctx === 'day' ? TRACKS.day[this.dayIndex] : TRACKS.night[0];
+    return TRACKS[ctx][(this.playlistIndex[ctx] ?? 0) % TRACKS[ctx].length];
   }
 
   private startTrack(name: string, fadeIn = false) {
     this.currentTrack = name;
     this.sincePlay = 0;
     const a = new Audio(`/audio/${name}.mp3`);
-    const isNight = this.context === 'night';
-    a.loop = isNight;
+    const ctx = this.context;
+    const loops = LOOPING.includes(ctx);
+    a.loop = loops;
     a.volume = fadeIn ? 0 : BGM_VOLUME;
     a.currentTime = this.positions[name] || 0;
     a.muted = store.get().muted;
-    if (!isNight) {
-      // day tracks play once and hand off to the next playlist entry
-      a.addEventListener('ended', () => this.onDayTrackEnded(a, name));
+    if (!loops) {
+      // playlist tracks play once and hand off to the next entry
+      a.addEventListener('ended', () => this.onPlaylistTrackEnded(a, name, ctx));
     }
     a.play().catch(() => {
       /* autoplay refusal — user can unmute from the HUD */
@@ -129,14 +141,15 @@ class AudioManager {
     this.current = a;
   }
 
-  /** a day track finished on its own — drop its resume spot and roll the playlist forward */
-  private onDayTrackEnded(track: HTMLAudioElement, name: string) {
-    if (this.context !== 'day' || track !== this.current) return;
+  /** a playlist track finished on its own — drop its resume spot and roll forward */
+  private onPlaylistTrackEnded(track: HTMLAudioElement, name: string, ctx: MusicContext) {
+    if (this.context !== ctx || track !== this.current) return;
     delete this.positions[name];
     this.fading?.pause();
     this.fading = this.current; // already stopped; update() lets the (silent) handle fade out and clear
-    this.dayIndex = (this.dayIndex + 1) % TRACKS.day.length;
-    this.startTrack(TRACKS.day[this.dayIndex], true);
+    const next = ((this.playlistIndex[ctx] ?? 0) + 1) % TRACKS[ctx].length;
+    this.playlistIndex[ctx] = next;
+    this.startTrack(TRACKS[ctx][next], true);
   }
 
   private crossfadeTo(name: string) {

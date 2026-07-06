@@ -1,13 +1,17 @@
 /**
  * Low-poly sea: a big Lambert plane with gentle sine-wave vertex displacement
  * injected via onBeforeCompile, so it keeps fog and lighting for free.
+ * v3: the whole plane rides the tide (world/tide.ts), and waveAt() mirrors
+ * the shader's displacement in JS so the boat can bob on the same water.
  */
 import * as THREE from 'three';
 import { SEA_LEVEL } from './terrain';
+import { getWaterLevel } from './tide';
 
 export class Water {
   readonly mesh: THREE.Mesh;
   private shader: THREE.WebGLProgramParametersWithUniforms | null = null;
+  private time = 0;
 
   constructor() {
     const geo = new THREE.PlaneGeometry(1400, 1400, 96, 96);
@@ -37,7 +41,19 @@ export class Water {
     this.mesh.position.y = SEA_LEVEL;
   }
 
+  /** the shader's wave displacement, mirrored in JS — what the boat bobs on.
+   *  (plane geometry is world-aligned and origin-centered, so world x/z ARE
+   *  the shader's position.x/z) */
+  waveAt(x: number, z: number): number {
+    const t = this.time;
+    return (
+      Math.sin(x * 0.14 + t * 1.1) * 0.22 + Math.cos(z * 0.11 + t * 0.7) * 0.18 + Math.sin((x + z) * 0.05 + t * 0.4) * 0.12
+    );
+  }
+
   update(dt: number) {
-    if (this.shader) this.shader.uniforms.uTime.value += dt;
+    this.time += dt;
+    if (this.shader) this.shader.uniforms.uTime.value = this.time;
+    this.mesh.position.y = getWaterLevel();
   }
 }

@@ -22,6 +22,17 @@ interface HerbCluster {
 
 const rng = makeRng(31337);
 
+/** where to scatter a field of herbs — one per island */
+export interface HerbFieldCfg {
+  cx: number;
+  cz: number;
+  radius: number;
+  /** scales each HerbDef's count (island 2 is smaller) */
+  countScale: number;
+}
+
+export const ISLAND1_HERBS: HerbFieldCfg = { cx: 0, cz: 0, radius: ISLAND_RADIUS, countScale: 1 };
+
 /** low bushy beach mint: thin stems, paired rounded leaves, tiny flower spikes */
 export function buildSeamint(def: HerbDef): { group: THREE.Group; blossoms: THREE.Mesh[] } {
   const group = new THREE.Group();
@@ -153,9 +164,10 @@ export class HerbField {
   private clusters: HerbCluster[] = [];
   private clock = 0;
 
-  constructor(private onGather: () => void, private toast: (msg: string) => void) {
+  constructor(private onGather: () => void, private toast: (msg: string) => void, private cfg: HerbFieldCfg = ISLAND1_HERBS) {
     for (const def of HERBS) {
-      for (let i = 0; i < def.count; i++) {
+      const count = Math.max(2, Math.round(def.count * cfg.countScale));
+      for (let i = 0; i < count; i++) {
         const pos = this.scatter(def);
         if (!pos) continue;
         const { group, blossoms } = buildCluster(def);
@@ -187,9 +199,9 @@ export class HerbField {
   private scatter(def: HerbDef): THREE.Vector3 | null {
     for (let tries = 0; tries < 60; tries++) {
       const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * ISLAND_RADIUS * 0.9;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
+      const r = Math.sqrt(rng()) * this.cfg.radius * 0.9;
+      const x = this.cfg.cx + Math.cos(a) * r;
+      const z = this.cfg.cz + Math.sin(a) * r;
       const h = heightAt(x, z);
       if (h >= def.minH && h <= def.maxH && slopeAt(x, z) < 0.85) {
         return new THREE.Vector3(x, h - 0.03, z);

@@ -11,6 +11,10 @@ export class Input {
   move = { x: 0, y: 0 };
   /** Space held: jump on land, paddle up to the surface while swimming */
   jump = false;
+  /** C/Shift held (or the HUD dive button): swim down while in the water */
+  dive = false;
+  /** the HUD dive button sets this on pointerdown/up; merged into `dive` */
+  diveTouch = false;
 
   private lookDX = 0;
   private lookDY = 0;
@@ -109,6 +113,7 @@ export class Input {
       this.move.y = len > 0 ? y / len : 0;
     }
     this.jump = this.keys.has('Space');
+    this.dive = this.diveTouch || this.keys.has('KeyC') || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
   }
 
   private onDown = (e: PointerEvent) => {

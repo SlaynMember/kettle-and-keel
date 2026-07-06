@@ -69,6 +69,8 @@ body,
 #ui > .guide-card,
 #ui > .sleep-fade,
 #ui > .discovery-card,
+#ui > .underwater-tint,
+#ui > .breath-meter,
 #ui > .satchel.hidden,
 #ui > .dialogue.hidden,
 #ui > .note-card.hidden {
@@ -946,4 +948,86 @@ img.discovery-glyph-img {
   font-weight: 700;
   letter-spacing: 0.04em;
   opacity: 0.5;
+}
+
+/* ---------- v3: the sea ---------- */
+.dive-btn {
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 50%;
+  background: #2f7f9e;
+  font-size: 26px;
+  box-shadow:
+    0 4px 0 #205a72,
+    0 8px 18px rgba(43, 30, 20, 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.1s,
+    opacity 0.15s;
+}
+
+.dive-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #205a72,
+    0 4px 10px rgba(43, 30, 20, 0.3);
+}
+
+.dive-btn.hidden {
+  display: none;
+}
+
+.breath-meter {
+  position: absolute;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--night-glass);
+  transition: opacity 0.25s;
+}
+
+.breath-meter.hidden {
+  opacity: 0;
+}
+
+.breath-emoji {
+  font-size: 16px;
+}
+
+.breath-track {
+  width: 130px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(253, 243, 223, 0.22);
+  overflow: hidden;
+}
+
+.breath-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: #7fd4e8;
+  transition: width 0.15s linear;
+}
+
+.breath-fill.low {
+  background: var(--sunset);
+}
+
+.underwater-tint {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(21, 74, 94, 0.28) 0%, rgba(12, 48, 64, 0.55) 100%);
+  transition: opacity 0.3s;
+}
+
+.buff-emoji {
+  font-size: 15px;
 }

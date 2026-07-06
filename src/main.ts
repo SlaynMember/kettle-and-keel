@@ -4,16 +4,20 @@ import { Input } from './core/input';
 import { CameraRig } from './core/camera';
 import { store } from './core/store';
 import { interactions } from './core/interact';
-import { buildTerrain, heightAt } from './world/terrain';
+import { buildTerrain, heightAt, ISLAND2_CENTER, ISLAND2_RADIUS, nearerIsland } from './world/terrain';
+import { setWorldTime, getWaterLevel, tideRising } from './world/tide';
 import { Sky } from './world/sky';
 import { Water } from './world/water';
-import { Props } from './world/props';
+import { Props, IslandTwoProps } from './world/props';
 import { DriftingLeaves } from './world/leaves';
 import { BeachFinds } from './world/beachfinds';
 import { Player } from './entities/player';
 import { HerbField } from './entities/herbs';
 import { ResourceField } from './entities/resources';
 import { Structures } from './entities/structures';
+import { Seafloor } from './entities/seafloor';
+import { Boat } from './entities/boat';
+import { Sharks } from './entities/sharks';
 import { Gull } from './entities/gull';
 import { ShootingStar } from './world/star';
 import { Hud } from './ui/hud';
@@ -75,6 +79,32 @@ scene.add(herbs.group);
 const resources = new ResourceField(spawn, (verb) => player.setAction(verb));
 scene.add(resources.group);
 
+// ---- island 2 (v3) ----
+const props2 = new IslandTwoProps(toast);
+scene.add(props2.group);
+
+const herbs2 = new HerbField(() => player.setAction('gather'), toast, {
+  cx: ISLAND2_CENTER.x,
+  cz: ISLAND2_CENTER.y,
+  radius: ISLAND2_RADIUS,
+  countScale: 0.7,
+});
+scene.add(herbs2.group);
+
+const resources2 = new ResourceField(props2.campfire.position, (verb) => player.setAction(verb), {
+  cx: ISLAND2_CENTER.x,
+  cz: ISLAND2_CENTER.y,
+  radius: ISLAND2_RADIUS,
+  trees: 20,
+  rocks: 12,
+  algae: 14,
+  seed: 90210,
+});
+scene.add(resources2.group);
+
+const seafloor = new Seafloor(() => player.setAction('gather'), toast);
+scene.add(seafloor.group);
+
 const structures = new Structures(toast);
 scene.add(structures.group);
 
@@ -88,7 +118,11 @@ const star = new ShootingStar();
 scene.add(star.group);
 
 const rig = new CameraRig(camera);
-rig.occluders = resources.occluders;
+// both islands' trees block the camera; the wrapper keeps them renderable
+const camOccluders = new THREE.Group();
+camOccluders.add(resources.occluders, resources2.occluders);
+scene.add(camOccluders);
+rig.occluders = camOccluders;
 const input = new Input(canvas, uiRoot);
 
 const panel = new SatchelPanel(uiRoot, toast);
@@ -103,7 +137,20 @@ hud = new Hud(uiRoot, {
   onAction: () => triggerAction(),
   onSatchel: () => panel.toggle(),
   onCancel: () => structures.cancelPlacement(),
+  onDiveHold: (held) => {
+    input.diveTouch = held;
+  },
 });
+
+// the boat, the sharks, and who they answer to
+const boat = new Boat(props.wreck, water, player, toast);
+scene.add(boat.group);
+const sharks = new Sharks(player, toast);
+scene.add(sharks.group);
+boat.onBoardChange = (aboard) => {
+  sharks.playerAboard = aboard;
+};
+props2.onUseKettle = () => panel.open(true);
 
 // placements must not smother the kettle prompt
 structures.avoid.push(props.campfire.position);
@@ -117,27 +164,7 @@ interactions.add({
   action: () => panel.open(true),
 });
 
-// the wreck: a broken hull half-buried down the beach, flavor-only
-let wreckLineIndex = 0;
-const WRECK_LINES = [
-  "The hull's split like old bread. She won't sail today.",
-  'Good keel under the barnacles. Worth saving.',
-  "You'll need wood. A lot of it. And a reason.",
-  'The gull left a feather on the bow. Sentimental, or littering.',
-];
-if (props.wreck) {
-  interactions.add({
-    label: () => 'Inspect the wreck',
-    position: props.wreck.position,
-    range: 3,
-    priority: 1,
-    action: () => {
-      toast(WRECK_LINES[wreckLineIndex % WRECK_LINES.length]);
-      wreckLineIndex++;
-      audio.sfx('sfx-ui-click');
-    },
-  });
-}
+// (the wreck's interactable now lives in entities/boat.ts — it's the v3 build site)
 
 // digging: a low-priority, always-in-range interactable gated on owning a shovel.
 // position is the live player.position reference, so distance-to-player is always ~0.
@@ -262,6 +289,10 @@ function triggerAction() {
     dialogue.advance();
     return;
   }
+  if (boat.sailing) {
+    boat.disembark();
+    return;
+  }
   if (structures.placing) {
     structures.confirmPlacement();
     return;
@@ -291,6 +322,7 @@ input.onEscape(() => {
 let started = false;
 let nightMusic = false; // hysteresis so the soundtrack doesn't flap at dusk
 let starWasActive = false; // edge-detects the shooting star ending, for the "Make a wish." toast
+let wasGasping = false; // edge-detects running out of breath, for the surfacing toast
 const clock = new THREE.Clock();
 const idleInput = { move: { x: 0, y: 0 } } as Input;
 
@@ -301,12 +333,23 @@ function tick() {
     rig.yaw += dt * 0.05; // slow establishing orbit behind the intro overlay
   }
   input.update();
-  player.update(dt, started && !panel.isOpen && !dialogue.isOpen && !sleeping && !cards.noteOpen ? input : idleInput, rig.yaw);
+  setWorldTime(sky.time); // stamp the tide before anything samples the water
+
+  const inputLive = started && !panel.isOpen && !dialogue.isOpen && !sleeping && !cards.noteOpen;
+  if (boat.sailing) {
+    // aboard: the boat consumes movement, the player just rides the deck
+    boat.update(dt, inputLive ? input.move : idleInput.move);
+  } else {
+    player.update(dt, inputLive ? input : idleInput, rig.yaw);
+    boat.update(dt, idleInput.move); // still bobs at its mooring
+  }
 
   // buffs
   buffs.speed = Math.max(0, buffs.speed - dt);
   buffs.glow = Math.max(0, buffs.glow - dt);
+  buffs.breath = Math.max(0, buffs.breath - dt);
   player.speedMult = buffs.speed > 0 ? 1.3 : 1;
+  player.kelpLungs = buffs.breath > 0;
   glowLight.intensity = buffs.glow > 0 ? 1.4 + Math.sin(clock.elapsedTime * 3) * 0.2 : 0;
   buffPersistTimer += dt;
   if (buffPersistTimer > 5) {
@@ -361,22 +404,66 @@ function tick() {
     hud.setSleepFade(fade);
   }
 
-  // soundtrack: the day playlist, or Hazy Tea Drift at night — nothing else touches it
+  // soundtrack: Beat the Drum aboard the boat; otherwise the nearer island's
+  // day playlist, or Hazy Tea Drift at night — nothing else touches it
   if (nightMusic ? sky.daylight > 0.32 : sky.daylight < 0.2) nightMusic = !nightMusic;
-  const musicCtx: MusicContext = nightMusic ? 'night' : 'day';
+  const musicCtx: MusicContext = boat.sailing
+    ? 'sailing'
+    : nightMusic
+      ? 'night'
+      : nearerIsland(player.position.x, player.position.z) === 2
+        ? 'day2'
+        : 'day';
   audio.setContext(musicCtx, dt);
   audio.update(dt);
 
   sky.update(dt, player.position);
   water.update(dt);
   props.update(dt, sky.daylight);
+  props2.update(dt, sky.daylight);
   leaves.update(dt, player.position);
   herbs.update(dt);
+  herbs2.update(dt);
   resources.update(dt);
+  resources2.update(dt);
+  seafloor.update(dt);
+  sharks.update(dt);
   structures.update(dt, player.position, player.heading);
   gull.update(dt, player.position);
   star.update(dt, player.position);
   interactions.update(player.position);
+
+  // first footfall on the far shore
+  if (
+    started &&
+    !store.get().visitedIsland2 &&
+    !player.swimming &&
+    !boat.sailing &&
+    Math.hypot(player.position.x - ISLAND2_CENTER.x, player.position.z - ISLAND2_CENTER.y) < ISLAND2_RADIUS
+  ) {
+    store.set({ visitedIsland2: true });
+    toast('A new shore under your boots.');
+    audio.sfx('sfx-levelup');
+  }
+
+  // breath + underwater dressing
+  const waterLevel = getWaterLevel();
+  const camUnder = camera.position.y < waterLevel;
+  hud.setUnderwater(camUnder ? 1 : player.underwater ? 0.5 : 0);
+  const fog = scene.fog as THREE.Fog;
+  if (camUnder) {
+    fog.near = 3;
+    fog.far = 58;
+    fog.color.setHex(0x14536a);
+  } else {
+    fog.near = 70;
+    fog.far = 320;
+  }
+  hud.setDiveVisible(started && player.swimming && !boat.sailing && !panel.isOpen && !dialogue.isOpen);
+  const breathRelevant = player.swimming && (player.underwater || player.breath < player.breathMax - 0.5);
+  hud.setBreath(breathRelevant ? player.breath / player.breathMax : null);
+  if (player.gasping && !wasGasping) toast('You bob up, lungs burning.');
+  wasGasping = player.gasping;
 
   // first-night shooting star: once ever per save, fires the moment night first falls
   if (started && sky.daylight < 0.15 && !store.get().starSeen && !dialogue.isOpen) {
@@ -395,9 +482,11 @@ function tick() {
 
   rig.update(dt, input, player.position);
 
-  // context button: placement wins, then the star-watch prompt, then the nearest interactable
+  // context button: sailing wins, then placement, then the star prompt, then the nearest interactable
   if (!started || panel.isOpen || dialogue.isOpen || sleeping || cards.noteOpen) {
     hud.setAction(null);
+  } else if (boat.sailing) {
+    hud.setAction(boat.disembarkLabel());
   } else if (structures.placing) {
     hud.setAction(structures.placementLabel(), { danger: !structures.placementLabel().startsWith('Place'), cancelable: true });
   } else if (star.watching) {
@@ -407,7 +496,7 @@ function tick() {
   } else {
     hud.setAction(interactions.active?.label() ?? null);
   }
-  hud.setTime(sky.time, store.get().day);
+  hud.setTime(sky.time, store.get().day, tideRising(sky.time));
   hud.setBuffs(buffs);
   renderer.render(scene, camera);
 }
@@ -432,5 +521,25 @@ tick();
 
 // dev/debug handle (also how automated playtests drive the game)
 Object.assign(window, {
-  __kk: { player, rig, sky, camera, heightAt, store, structures, gull, star, buffs, audio, panel, dialogue, cards, beachFinds },
+  __kk: {
+    player,
+    rig,
+    sky,
+    camera,
+    heightAt,
+    getWaterLevel,
+    store,
+    structures,
+    gull,
+    star,
+    buffs,
+    audio,
+    panel,
+    dialogue,
+    cards,
+    beachFinds,
+    boat,
+    sharks,
+    seafloor,
+  },
 });

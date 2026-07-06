@@ -9,9 +9,20 @@ import { interactions } from '../core/interact';
 import { store } from '../core/store';
 import { audio } from '../audio/audio';
 
-const rng = makeRng(48151);
-
 type NodeKind = 'tree' | 'rock' | 'algae';
+
+/** where and how much to scatter — one per island */
+export interface FieldCfg {
+  cx: number;
+  cz: number;
+  radius: number;
+  trees: number;
+  rocks: number;
+  algae: number;
+  seed: number;
+}
+
+export const ISLAND1_FIELD: FieldCfg = { cx: 0, cz: 0, radius: ISLAND_RADIUS, trees: 26, rocks: 16, algae: 22, seed: 48151 };
 
 interface HarvestNode {
   kind: NodeKind;
@@ -31,19 +42,21 @@ const NODE_CFG: Record<NodeKind, { hits: number; yields: string; respawn: number
   algae: { hits: 1, yields: 'algae', respawn: 45, label: 'Gather Algae', verb: 'gather' },
 };
 
-function scatterPoint(minH: number, maxH: number, maxSlope: number): THREE.Vector3 | null {
+type Rng = () => number;
+
+function scatterPoint(rng: Rng, cfg: FieldCfg, minH: number, maxH: number, maxSlope: number): THREE.Vector3 | null {
   for (let tries = 0; tries < 40; tries++) {
     const a = rng() * Math.PI * 2;
-    const r = Math.sqrt(rng()) * ISLAND_RADIUS * 1.02;
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
+    const r = Math.sqrt(rng()) * cfg.radius * 1.02;
+    const x = cfg.cx + Math.cos(a) * r;
+    const z = cfg.cz + Math.sin(a) * r;
     const h = heightAt(x, z);
     if (h >= minH && h <= maxH && slopeAt(x, z) <= maxSlope) return new THREE.Vector3(x, h, z);
   }
   return null;
 }
 
-function puffTree(): THREE.Group {
+function puffTree(rng: Rng): THREE.Group {
   const g = new THREE.Group();
   const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8a5a3b, flatShading: true });
   const canopyMat = new THREE.MeshLambertMaterial({
@@ -68,7 +81,7 @@ function puffTree(): THREE.Group {
   return g;
 }
 
-function boulder(): THREE.Group {
+function boulder(rng: Rng): THREE.Group {
   const g = new THREE.Group();
   const m = new THREE.Mesh(
     new THREE.DodecahedronGeometry(0.7 + rng() * 1.0, 0),
@@ -81,7 +94,7 @@ function boulder(): THREE.Group {
   return g;
 }
 
-function algaeTuft(): THREE.Group {
+function algaeTuft(rng: Rng): THREE.Group {
   const g = new THREE.Group();
   const mat = new THREE.MeshLambertMaterial({ color: 0x3d9970, flatShading: true });
   const strands = 4 + Math.floor(rng() * 3);
@@ -102,24 +115,25 @@ export class ResourceField {
   private nodes: HarvestNode[] = [];
   private clock = 0;
 
-  constructor(spawn: THREE.Vector3, private onHarvest: (verb: 'punch' | 'gather') => void) {
+  constructor(spawn: THREE.Vector3, private onHarvest: (verb: 'punch' | 'gather') => void, cfg: FieldCfg = ISLAND1_FIELD) {
+    const rng = makeRng(cfg.seed);
     this.group.add(this.occluders);
     const clearOfSpawn = (p: THREE.Vector3, r: number) => Math.hypot(p.x - spawn.x, p.z - spawn.z) >= r;
 
-    for (let i = 0; i < 26; i++) {
-      const p = scatterPoint(1.8, 11, 0.6);
+    for (let i = 0; i < cfg.trees; i++) {
+      const p = scatterPoint(rng, cfg, 1.8, 11, 0.6);
       if (!p || !clearOfSpawn(p, 14)) continue;
-      this.addNode('tree', puffTree(), p, this.occluders);
+      this.addNode('tree', puffTree(rng), p, this.occluders);
     }
-    for (let i = 0; i < 16; i++) {
-      const p = scatterPoint(0.6, 14, 1.2);
+    for (let i = 0; i < cfg.rocks; i++) {
+      const p = scatterPoint(rng, cfg, 0.6, 14, 1.2);
       if (!p || !clearOfSpawn(p, 6)) continue;
-      this.addNode('rock', boulder(), p, this.group);
+      this.addNode('rock', boulder(rng), p, this.group);
     }
-    for (let i = 0; i < 22; i++) {
-      const p = scatterPoint(-1.8, -0.45, 2);
+    for (let i = 0; i < cfg.algae; i++) {
+      const p = scatterPoint(rng, cfg, -1.8, -0.45, 2);
       if (!p) continue;
-      this.addNode('algae', algaeTuft(), p, this.group);
+      this.addNode('algae', algaeTuft(rng), p, this.group);
     }
   }
 

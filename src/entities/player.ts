@@ -4,19 +4,25 @@
  * All animation is driven by one clock here — no per-sprite timer drift.
  */
 import * as THREE from 'three';
-import { heightAt } from '../world/terrain';
-import { SEA_LEVEL } from '../world/terrain';
+import { heightAt, insideWorld } from '../world/terrain';
+import { getWaterLevel } from '../world/tide';
 import type { Input } from '../core/input';
 
 const SPEED = 7;
 const SWIM_SPEED = 3.6;
 const TURN_LERP = 12;
-const SWIM_START = -0.8; // terrain below this = swimming
-const SWIM_Y = SEA_LEVEL - 0.85; // body sits low in the water — the surface cap, never exceeded
+const SWIM_START = 0.8; // terrain this far under the water line = swimming
+const SWIM_DRAFT = 0.85; // body sits this far below the surface — the surface cap, never exceeded
 const JUMP_SPEED = 5.2;
 const GRAVITY = 14;
 const PADDLE_UP_RATE = 3.2; // holding Space while swimming
 const BUOYANCY_RATE = 1.1; // natural rise back to the surface otherwise
+const DIVE_RATE = 2.6; // holding C/Shift/dive button: swim down
+const DIVE_FLOOR_GAP = 0.45; // never sink into the seafloor
+const HEAD_UNDER = 1.3; // submerged this far below the surface = breath ticks
+const BREATH_BASE = 12; // seconds of air; kelp tea raises it
+const BREATH_KELP = 26;
+const BREATH_REFILL = 6; // refill rate at the surface (seconds of air per second)
 const TREAD_LEAN = 0.22; // idle in water: mostly upright, slight forward lean
 const PRONE_ANGLE = 1.4; // ~80deg forward pitch while swimming and moving
 const PRONE_EASE = 4; // ~0.25s ease into/out of the prone swim pose
@@ -29,6 +35,14 @@ export class Player {
   /** multiplier from tea buffs */
   speedMult = 1;
   swimming = false;
+  /** kelp-tea buff active: deeper lungs (main.ts sets this each frame) */
+  kelpLungs = false;
+  /** seconds of air left; only drains while the head is under */
+  breath = BREATH_BASE;
+  /** true while fully submerged (breath draining) */
+  underwater = false;
+  /** breath ran out — buoyancy overrides the dive until the surface */
+  gasping = false;
 
   /** facing angle; placement ghosts and future companions read it */
   heading = 0;
@@ -90,6 +104,11 @@ export class Player {
     this.group.position.copy(this.position);
   }
 
+  /** current lung capacity in seconds (kelp tea deepens it) */
+  get breathMax(): number {
+    return this.kelpLungs ? BREATH_KELP : BREATH_BASE;
+  }
+
   /** play a short action animation (punch swings the arm, gather crouches) */
   setAction(action: PlayerAction) {
     this.action = action;
@@ -105,8 +124,9 @@ export class Player {
     const my = input.move.y;
     const intent = Math.min(1, Math.hypot(mx, my));
 
+    const water = getWaterLevel();
     const groundHere = heightAt(this.position.x, this.position.z);
-    this.swimming = groundHere < SWIM_START;
+    this.swimming = groundHere < water - SWIM_START;
     const speed = (this.swimming ? SWIM_SPEED : SPEED) * this.speedMult;
 
     if (intent > 0.05) {
@@ -117,8 +137,8 @@ export class Player {
 
       const nx = this.position.x + dirX * speed * intent * dt;
       const nz = this.position.z + dirZ * speed * intent * dt;
-      // soft world-edge clamp; swimming allows deep water
-      if (Math.hypot(nx, nz) < 95) {
+      // soft world-edge clamp; the bound is a disc covering both islands
+      if (insideWorld(nx, nz)) {
         this.position.x = nx;
         this.position.z = nz;
       }
@@ -133,6 +153,7 @@ export class Player {
 
     // vertical: walk the terrain with a jump arc, or swim at (or below) the surface
     const ground = heightAt(this.position.x, this.position.z);
+    const swimY = water - SWIM_DRAFT; // the surface cap — never exceeded
     if (this.swimming) {
       if (this.airborne) {
         // hit the water mid-jump — carry a little fall momentum under the surface
@@ -140,9 +161,17 @@ export class Player {
         this.airborne = false;
         this.vy = 0;
       }
-      const rising = input.jump ? PADDLE_UP_RATE : BUOYANCY_RATE; // paddling up beats natural buoyancy
-      this.submerge = Math.max(0, this.submerge - rising * dt);
-      this.position.y = SWIM_Y - this.submerge; // SWIM_Y is the surface cap — never exceeded
+      // dive down toward the seafloor, or float/paddle back up
+      const floorCap = Math.max(0, swimY - (ground + DIVE_FLOOR_GAP));
+      if (input.dive && !this.gasping) {
+        this.submerge = Math.min(floorCap, this.submerge + DIVE_RATE * dt);
+      } else {
+        // paddling up (or gasping for air) beats natural buoyancy
+        const rising = input.jump || this.gasping ? PADDLE_UP_RATE : BUOYANCY_RATE;
+        this.submerge = Math.max(0, this.submerge - rising * dt);
+      }
+      this.submerge = Math.min(this.submerge, floorCap); // floor rose under us — never clip in
+      this.position.y = swimY - this.submerge;
     } else {
       if (!this.airborne && input.jump) {
         this.airborne = true;
@@ -158,9 +187,22 @@ export class Player {
           this.submerge = 0;
         }
       } else {
-        this.position.y = Math.max(ground, SWIM_START);
+        this.position.y = Math.max(ground, swimY);
       }
     }
+
+    // breath: drains while the head is under, refills fast at the surface.
+    // Running dry never hurts — buoyancy just wins until the next gulp of air.
+    this.underwater = this.swimming && this.position.y < water - HEAD_UNDER;
+    const breathMax = this.breathMax;
+    if (this.underwater) {
+      this.breath = Math.max(0, this.breath - dt);
+      if (this.breath <= 0) this.gasping = true;
+    } else {
+      this.breath = Math.min(breathMax, this.breath + BREATH_REFILL * dt);
+      if (this.submerge < 0.2) this.gasping = false;
+    }
+    this.breath = Math.min(this.breath, breathMax); // kelp tea wore off mid-dive
 
     // procedural animation, all off one clock
     this.walkClock += dt * (4 + 6 * this.moving);

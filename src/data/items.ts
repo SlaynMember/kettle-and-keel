@@ -20,7 +20,11 @@ export type ItemId =
   | 'dirt'
   | 'loam'
   | 'garden_bed_kit'
-  | 'lean_to_kit';
+  | 'lean_to_kit'
+  | 'kelp'
+  | 'dried_kelp'
+  | 'kelp_tea'
+  | 'pearl';
 
 export interface ItemDef {
   id: ItemId;
@@ -30,7 +34,7 @@ export interface ItemDef {
   /** generated art in public/images/icons/items/; emoji is the fallback */
   icon?: string;
   /** teas can be drunk from the satchel */
-  drinkable?: { buff: 'speed' | 'glow'; seconds: number };
+  drinkable?: { buff: 'speed' | 'glow' | 'breath'; seconds: number };
   /** kits can be placed in the world */
   placeable?: 'drying_rack' | 'bird_bath' | 'garden_bed' | 'lean_to';
   /** fresh herbs can go on a drying rack */
@@ -106,6 +110,17 @@ export const ITEMS: ItemDef[] = [
     desc: 'A first roof. Sleep through the night.',
     placeable: 'lean_to',
   },
+  // ---- v3: the sea past the reef (emoji fallback until the next icon batch) ----
+  { id: 'kelp', name: 'Kelp', emoji: '🥬', desc: 'Broad green ribbons from the deep forests.', driesTo: 'dried_kelp' },
+  { id: 'dried_kelp', name: 'Dried Kelp', emoji: '🍂', desc: 'Papery ocean leaves. Ready for the kettle.' },
+  {
+    id: 'kelp_tea',
+    name: 'Kelp Tea',
+    emoji: '🧉',
+    desc: 'Drink for deeper lungs — the reef opens up.',
+    drinkable: { buff: 'breath', seconds: 180 },
+  },
+  { id: 'pearl', name: 'Pearl', emoji: '🦪', desc: 'A quiet moon from the seafloor. The gull stares at it.' },
 ];
 
 export const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
@@ -128,6 +143,7 @@ export const RECIPES: RecipeDef[] = [
   { id: 'r_loam', output: 'loam', outputQty: 2, inputs: { sand: 2, dirt: 2, algae: 1 }, station: 'hand' },
   { id: 'r_garden_bed', output: 'garden_bed_kit', outputQty: 1, inputs: { wood: 1, loam: 2 }, station: 'hand' },
   { id: 'r_lean_to', output: 'lean_to_kit', outputQty: 1, inputs: { wood: 6, stone: 2 }, station: 'hand' },
+  { id: 'r_kelp_tea', output: 'kelp_tea', outputQty: 1, inputs: { dried_kelp: 2, dried_seamint: 1 }, station: 'kettle' },
 ];
 
 /** seconds of real time for herbs to dry on a rack (60s = 4 in-game hours) */

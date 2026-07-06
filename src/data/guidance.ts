@@ -74,9 +74,30 @@ export const GOALS: GuideGoal[] = [
     text: 'Raise a lean-to before the cold nights come.',
     done: (s) => s.structures.some((st) => st.type === 'lean_to'),
   },
+  // ---- v3: the keel half of the name ----
+  {
+    id: 'hull',
+    text: 'That wreck on the west beach has a good keel. Rebuild the hull.',
+    done: (s) => s.boat.stage >= 1,
+  },
+  {
+    id: 'rig',
+    text: 'She needs a mast and a sail. Algae weaves tighter than you think.',
+    done: (s) => s.boat.stage >= 2,
+  },
+  {
+    id: 'cross',
+    text: 'Sail west, past the reef and the grey fins. There is another shore.',
+    done: (s) => s.visitedIsland2,
+  },
+  {
+    id: 'camp2',
+    text: 'Someone camped on the far shore once. Wake their cold fire.',
+    done: (s) => s.camp2Lit,
+  },
   {
     id: 'open',
-    text: 'Tend the island. The gull will think of something.',
+    text: 'Two shores, one kettle. The gull will think of something.',
     done: () => false, // terminal — nothing left to auto-advance to
   },
 ];
