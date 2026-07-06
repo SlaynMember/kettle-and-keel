@@ -22,9 +22,9 @@ Three.js + TypeScript (strict) + Vite, deployed as a PWA. No React, no game fram
 
 ## Layout
 
-- `src/core/` — store (typed save: inventory/structures/buffs), input, camera rig, interact (unified proximity-prompt system — register anything usable here)
-- `src/world/` — terrain (heightAt/slopeAt are analytic — sample them, never raycast the mesh), sky (owns time of day), water, props (grass + campfire/kettle)
-- `src/entities/` — player (walk/swim/punch/gather animations), herbs, resources (harvestable trees/rocks/algae), structures (drying rack + placement-ghost flow; shack building extends this)
+- `src/core/` — store (typed save: inventory/structures/buffs/boat), input, camera rig, interact (unified proximity-prompt system — register anything usable here)
+- `src/world/` — terrain (heightAt/slopeAt are analytic and cover BOTH islands + sandbars — sample them, never raycast the mesh), tide (main stamps setWorldTime each frame; everything reads getWaterLevel), sky (owns time of day), water (waveAt mirrors the shader so the boat bobs on real waves), props (grass + both campfires/kettles)
+- `src/entities/` — player (walk/swim/dive/breath), herbs, resources (harvestable trees/rocks/algae, per-island cfg), structures (drying rack + placement-ghost flow), boat (wreck rebuild arc + sailing), seafloor (kelp/oysters/cargo), sharks (deep-water bump, never lethal)
 - `src/data/` — content registries (items, recipes, herbs)
 - `src/audio/` — audio manager (resuming music playlist); files in `public/audio/` carried from Corsair Catch (element-attack WAVs still in the old repo if needed)
 - `src/ui/` — DOM HUD, satchel/kettle panel, intro overlay, styles (Fredoka, self-hosted in `public/fonts/`)
@@ -40,4 +40,4 @@ Dev server + chrome-devtools MCP. `window.__kk` exposes `{ player, rig, sky, cam
 
 ## Roadmap
 
-v1 crafting → v2 boat + island 2 → v3 companions + gardening/tea → v4 weather + multiplayer (WS server on non-Netlify host). Details in Obsidian: `Projects/Personal/Kettle-and-Keel.md`.
+v1 crafting → v2 homestead (shack/gardens) → v3 boat + island 2 + tides/diving/sharks (SHIPPED) → v4 companions (tea-sharing at the campfire, gull tolerance) → v5 islands 3-4, weather, multiplayer (WS server on non-Netlify host). Details in Obsidian: `Projects/Personal/Kettle-and-Keel.md`.
